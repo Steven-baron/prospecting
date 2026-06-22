@@ -68,10 +68,12 @@
               'ring-2 ring-inset ring-ink-blue-2': highlightedId === r.placeId,
             }"
             @click="panTo(r)">
-            <input type="checkbox"
-              :checked="selected.has(r.placeId)"
-              @click.stop @change="toggleSelect(r.placeId)"
-              class="form-checkbox mt-0.5 flex-shrink-0 cursor-pointer" />
+            <div class="flex-shrink-0 flex items-start pt-0.5" @click.stop="toggleSelect(r.placeId)">
+              <input type="checkbox"
+                :checked="selected.has(r.placeId)"
+                @click.prevent
+                class="form-checkbox cursor-pointer" />
+            </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-sm font-medium text-ink-gray-9">{{ r.businessName }}</span>
