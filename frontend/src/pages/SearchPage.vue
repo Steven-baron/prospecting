@@ -67,7 +67,7 @@
               'bg-surface-blue-1': selected.has(r.placeId),
               'ring-2 ring-inset ring-ink-blue-2': highlightedId === r.placeId,
             }"
-            @click="toggleSelect(r.placeId); panTo(r)">
+            @click="panTo(r)">
             <input type="checkbox"
               :checked="selected.has(r.placeId)"
               @click.stop @change="toggleSelect(r.placeId)"
