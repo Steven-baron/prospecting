@@ -382,7 +382,15 @@ def remove_from_list(prospect_names):
 
 @frappe.whitelist()
 def push_to_crm(prospect_names):
-	"""Create CRM Lead records from selected prospects."""
+	"""
+	Push prospects to CRM.
+	Creates a CRM Organization + CRM Lead per prospect.
+	- Organization holds the company info (name, website).
+	- Lead is a placeholder person (company name) to be updated once
+	  a real contact is identified. Phone/email live on the Lead.
+	- Notes are saved to the Lead's FCRM Note (Notes tab in CRM).
+	Re-pushing an existing record only syncs the notes.
+	"""
 	if isinstance(prospect_names, str):
 		prospect_names = json.loads(prospect_names)
 
@@ -391,21 +399,30 @@ def push_to_crm(prospect_names):
 	for pname in prospect_names:
 		p = frappe.get_doc('Prospect', pname)
 
-		# If lead already exists, just sync notes and skip creation
-		existing = frappe.db.exists('CRM Lead', {
-			'organization': p.prospect_name,
-			'email': p.email_id or '',
-		})
-		if existing:
-			_sync_note_to_crm(p, existing)
+		# If a lead already exists for this org, just sync notes
+		existing_lead = frappe.db.exists('CRM Lead', {'organization': p.prospect_name})
+		if existing_lead:
+			_sync_note_to_crm(p, existing_lead)
 			skipped += 1
 			continue
 
 		try:
+			# ── 1. Create or reuse CRM Organization ──────────────────────────
+			org_name = frappe.db.exists('CRM Organization', {'organization_name': p.prospect_name})
+			if not org_name:
+				org = frappe.get_doc({
+					'doctype':           'CRM Organization',
+					'organization_name': p.prospect_name,
+					'website':           p.website or '',
+				})
+				org.insert(ignore_permissions=True)
+				org_name = org.name
+
+			# ── 2. Create CRM Lead (placeholder person = company name) ────────
 			lead = frappe.new_doc('CRM Lead')
-			lead.first_name   = p.prospect_name
+			lead.first_name   = p.prospect_name   # placeholder — update once real contact is known
 			lead.lead_name    = p.prospect_name
-			lead.organization = p.prospect_name
+			lead.organization = p.prospect_name   # text field on Lead
 			lead.email        = p.email_id or ''
 			lead.mobile_no    = p.mobile_no or ''
 			lead.phone        = p.mobile_no or ''
@@ -413,10 +430,10 @@ def push_to_crm(prospect_names):
 			lead.source       = _get_or_create_source('Prospecting')
 			lead.insert(ignore_permissions=True)
 
-			# Save notes to CRM's native FCRM Note (shows in the Notes tab of the lead)
+			# ── 3. Sync notes → FCRM Note on the Lead ────────────────────────
 			_sync_note_to_crm(p, lead.name)
 
-			# Mark the prospect as converted
+			# ── 4. Mark prospect as Qualified ────────────────────────────────
 			frappe.db.set_value('Prospect', pname, 'status', 'Qualified')
 			created += 1
 		except Exception as e:
