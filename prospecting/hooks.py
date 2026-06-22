@@ -5,21 +5,24 @@ app_description = "A simple prospecting CRM app"
 app_email = "steven.baronm@gmail.com"
 app_license = "mit"
 
+website_route_rules = [
+    {"from_route": "/prospecting/<path:app_path>", "to_route": "prospecting"},
+]
+
 # Apps
 # ------------------
 
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "prospecting",
-# 		"logo": "/assets/prospecting/logo.png",
-# 		"title": "Prospecting",
-# 		"route": "/prospecting",
-# 		"has_permission": "prospecting.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "prospecting",
+		"logo": "/assets/prospecting/images/logo.svg",
+		"title": "Prospecting",
+		"route": "/prospecting",
+	}
+]
 
 # Includes in <head>
 # ------------------
@@ -57,7 +60,7 @@ app_license = "mit"
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "apps"
 
 # website user home page (by Role)
 # role_home_page = {

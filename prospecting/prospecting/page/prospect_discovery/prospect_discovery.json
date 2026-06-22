@@ -1,0 +1,11 @@
+{
+ "creation": "2026-06-21 12:00:00.000000",
+ "doctype": "Page",
+ "module": "Prospecting",
+ "name": "prospect-discovery",
+ "page_name": "prospect-discovery",
+ "roles": [
+  {"role": "All"}
+ ],
+ "title": "Find Prospects"
+}

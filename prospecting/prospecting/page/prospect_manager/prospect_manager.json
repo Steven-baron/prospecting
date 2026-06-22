@@ -1,0 +1,9 @@
+{
+ "doctype": "Page",
+ "module": "Prospecting",
+ "name": "prospect-manager",
+ "page_name": "prospect-manager",
+ "roles": [{"role": "System Manager"}],
+ "standard": "Yes",
+ "title": "Prospects"
+}

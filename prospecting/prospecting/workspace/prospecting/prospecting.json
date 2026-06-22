@@ -1,0 +1,40 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"<b>Prospecting</b>\",\"col\":12}},{\"id\":\"s0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Prospects\",\"col\":3}},{\"id\":\"s1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}}]",
+ "creation": "2026-06-21 10:59:38.455492",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "🎯",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Prospecting",
+ "links": [],
+ "modified": "2026-06-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Prospecting",
+ "name": "Prospecting",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "label": "Prospects",
+   "link_to": "prospect-manager",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Settings",
+   "link_to": "Prospecting Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Prospecting"
+}

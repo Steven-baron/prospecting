@@ -1,0 +1,38 @@
+{
+ "actions": [],
+ "creation": "2026-06-21 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "google_places_api_key",
+  "google_maps_api_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "google_places_api_key",
+   "fieldtype": "Password",
+   "label": "Google Places API Key",
+   "description": "Server-side key. Enable \"Places API (New)\" in Google Cloud Console."
+  },
+  {
+   "fieldname": "google_maps_api_key",
+   "fieldtype": "Password",
+   "label": "Google Maps API Key (Public)",
+   "description": "Client-side key for map display. Enable \"Maps JavaScript API\"."
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Prospecting",
+ "name": "Prospecting Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "write": 1,
+   "role": "System Manager"
+  }
+ ]
+}

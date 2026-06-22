@@ -1,0 +1,22 @@
+{% if not frappe.session.user or frappe.session.user == 'Guest' %}
+  <meta http-equiv="refresh" content="0; url=/login?redirect-to=/prospecting">
+{% else %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prospecting</title>
+  <link rel="stylesheet" href="/assets/prospecting/prospecting/index.css">
+  <style>html,body{margin:0;padding:0;height:100%;overflow:hidden;}</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.csrf_token = "{{ csrf_token }}";
+    window.frappe_user = "{{ frappe.session.user }}";
+  </script>
+  <script src="/assets/prospecting/prospecting/index.js" type="module"></script>
+</body>
+</html>
+{% endif %}

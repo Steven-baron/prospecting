@@ -1,0 +1,261 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:prospect_name",
+ "creation": "2024-06-21 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "prospect_name",
+  "category",
+  "status",
+  "source",
+  "col_break_main",
+  "place_id",
+  "prospect_list",
+  "section_contact",
+  "email_id",
+  "mobile_no",
+  "col_break_contact",
+  "website",
+  "address",
+  "section_google",
+  "rating",
+  "review_count",
+  "business_status",
+  "col_break_google",
+  "lat",
+  "lng",
+  "google_maps_uri",
+  "google_types",
+  "section_additional",
+  "next_follow_up",
+  "contact_person",
+  "designation",
+  "col_break_additional",
+  "territory",
+  "section_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "prospect_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Business Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "New\nContacted\nQualified\nWon\nLost",
+   "default": "New"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "Source",
+   "default": "google-places"
+  },
+  {
+   "fieldname": "col_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "place_id",
+   "fieldtype": "Data",
+   "label": "Google Place ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "prospect_list",
+   "fieldtype": "Link",
+   "options": "Prospect List",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "List"
+  },
+  {
+   "fieldname": "section_contact",
+   "fieldtype": "Section Break",
+   "label": "Contact"
+  },
+  {
+   "fieldname": "email_id",
+   "fieldtype": "Data",
+   "options": "Email",
+   "in_list_view": 1,
+   "label": "Email"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "options": "Phone",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "col_break_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "website",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Website"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Data",
+   "label": "Address"
+  },
+  {
+   "fieldname": "section_google",
+   "fieldtype": "Section Break",
+   "label": "Google Data",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "rating",
+   "fieldtype": "Float",
+   "label": "Rating",
+   "precision": "1"
+  },
+  {
+   "fieldname": "review_count",
+   "fieldtype": "Int",
+   "label": "Reviews"
+  },
+  {
+   "fieldname": "business_status",
+   "fieldtype": "Data",
+   "label": "Business Status"
+  },
+  {
+   "fieldname": "col_break_google",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lat",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "6"
+  },
+  {
+   "fieldname": "lng",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "6"
+  },
+  {
+   "fieldname": "google_maps_uri",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Google Maps URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "google_types",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Google Types",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_additional",
+   "fieldtype": "Section Break",
+   "label": "Additional Details",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "next_follow_up",
+   "fieldtype": "Date",
+   "label": "Follow-up Date"
+  },
+  {
+   "fieldname": "contact_person",
+   "fieldtype": "Data",
+   "label": "Contact Person"
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Data",
+   "label": "Designation"
+  },
+  {
+   "fieldname": "col_break_additional",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "territory",
+   "fieldtype": "Data",
+   "label": "Territory / Region"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Prospecting",
+ "name": "Prospect",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {"color": "Blue",   "title": "New"},
+  {"color": "Yellow", "title": "Contacted"},
+  {"color": "Purple", "title": "Qualified"},
+  {"color": "Green",  "title": "Won"},
+  {"color": "Red",    "title": "Lost"}
+ ],
+ "title_field": "prospect_name",
+ "track_changes": 1
+}
