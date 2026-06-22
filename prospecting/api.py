@@ -184,18 +184,31 @@ def _map_place(p):
 
 
 def _search_cell_paginated(endpoint, req_headers, base_body, max_pages):
-	"""Fetch one grid cell across multiple pages; returns all raw place dicts."""
+	"""Fetch one grid cell across multiple pages; returns all raw place dicts.
+
+	If the request fails due to an invalid includedType, retries once without it.
+	"""
 	import requests as _req
 	places = []
 	page_token = None
+	body_to_use = dict(base_body)
 	for _ in range(max_pages):
-		body = dict(base_body)
+		body = dict(body_to_use)
 		if page_token:
 			body['pageToken'] = page_token
 		try:
 			resp = _req.post(endpoint, json=body, headers=req_headers, timeout=20)
 			if not resp.ok:
-				break
+				# If includedType was rejected, retry without it (once)
+				if resp.status_code == 400 and 'includedType' in body_to_use:
+					body_to_use.pop('includedType', None)
+					body.pop('includedType', None)
+					body.pop('pageToken', None)
+					resp = _req.post(endpoint, json=body, headers=req_headers, timeout=20)
+					if not resp.ok:
+						break
+				else:
+					break
 			data = resp.json()
 			places.extend(data.get('places', []))
 			page_token = data.get('nextPageToken')
@@ -282,6 +295,7 @@ def search_places(query, included_type='', region_code='', max_pages=2, bounds=N
 		# ── Original pagination (no city bounds selected) ─────────────────
 		import requests as _req
 		page_token = None
+		type_dropped = False
 		for _ in range(max_pages):
 			body = dict(base_body)
 			body['maxResultCount'] = 20
@@ -292,7 +306,17 @@ def search_places(query, included_type='', region_code='', max_pages=2, bounds=N
 
 			resp = _req.post(_PLACES_ENDPOINT, json=body, headers=req_headers, timeout=15)
 			if not resp.ok:
-				break
+				# Retry without includedType if it was rejected
+				if resp.status_code == 400 and 'includedType' in base_body and not type_dropped:
+					base_body.pop('includedType')
+					type_dropped = True
+					body.pop('includedType', None)
+					body.pop('pageToken', None)
+					resp = _req.post(_PLACES_ENDPOINT, json=body, headers=req_headers, timeout=15)
+					if not resp.ok:
+						break
+				else:
+					break
 			data = resp.json()
 			for p in data.get('places', []):
 				pid = p.get('id')

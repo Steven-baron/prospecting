@@ -217,6 +217,8 @@ function initAutocomplete() {
   ac.addListener('place_changed', () => {
     const place = ac.getPlace()
     if (!place?.geometry) return
+    // Sync Vue's ref with what Google wrote to the DOM, so re-renders don't overwrite it
+    whereText.value = locInputEl.value.value
     cityBounds.value = place.geometry.viewport || null
     if (cityBounds.value) map.fitBounds(cityBounds.value, 0)
     drawPolygon(place.name || locInputEl.value?.value)
