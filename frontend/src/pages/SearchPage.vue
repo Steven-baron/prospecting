@@ -275,10 +275,12 @@ function panTo(r) {
 }
 
 async function search() {
-  if (!what.value && !whereText.value) return
-  const query = what.value && whereText.value
-    ? `${what.value} in ${whereText.value}`
-    : what.value || whereText.value
+  // Use category label as the search term when WHAT is left blank
+  const effectiveWhat = what.value.trim() || categoryOption.value?.label || ''
+  if (!effectiveWhat && !whereText.value) return
+  const query = effectiveWhat && whereText.value
+    ? `${effectiveWhat} in ${whereText.value}`
+    : effectiveWhat || whereText.value
 
   let bounds_arg
   if (cityBounds.value) {
