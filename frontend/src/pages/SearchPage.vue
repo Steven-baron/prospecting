@@ -178,7 +178,7 @@ const mapReady     = ref(false)
 const locInputEl   = ref(null)
 const resultsListEl = ref(null)
 const highlightedId = ref(null)
-let map = null, markers = [], cityFeatures = []
+let map = null, markers = [], cityFeatures = [], cityGeoJson = null
 
 // Save state
 const showSaveDialog = ref(false)
@@ -247,6 +247,7 @@ async function drawPolygon(name) {
     const data = await r.json()
     const geojson = data[0]?.geojson
     if (!geojson) return
+    cityGeoJson = geojson
     const features = map.data.addGeoJson({ type: 'Feature', geometry: geojson })
     cityFeatures = Array.isArray(features) ? features : [features]
     map.data.setStyle({ fillColor: '#6366f1', fillOpacity: 0.07, strokeColor: '#ef4444', strokeWeight: 2.5, strokeOpacity: .85 })
@@ -256,6 +257,25 @@ async function drawPolygon(name) {
 function clearPolygon() {
   cityFeatures.forEach(f => { try { map.data.remove(f) } catch(_){} })
   cityFeatures = []
+  cityGeoJson = null
+}
+
+function pointInGeoJson(lat, lng, geojson) {
+  if (!geojson) return true
+  const testRing = (ring) => {
+    let inside = false
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [x0, y0] = ring[i]  // GeoJSON: [longitude, latitude]
+      const [x1, y1] = ring[j]
+      if (((y0 > lat) !== (y1 > lat)) && (lng < (x1 - x0) * (lat - y0) / (y1 - y0) + x0))
+        inside = !inside
+    }
+    return inside
+  }
+  const testPoly = (coords) => testRing(coords[0])
+  if (geojson.type === 'Polygon') return testPoly(geojson.coordinates)
+  if (geojson.type === 'MultiPolygon') return geojson.coordinates.some(testPoly)
+  return true
 }
 
 function clearMarkers() { markers.forEach(m => m.setMap(null)); markers = [] }
@@ -311,7 +331,10 @@ async function search() {
       max_pages: parseInt(depth.value),
       bounds: bounds_arg,
     })
-    results.value = r?.results || []
+    const raw = r?.results || []
+    results.value = cityGeoJson
+      ? raw.filter(p => p.lat != null && pointInGeoJson(p.lat, p.lng, cityGeoJson))
+      : raw
     dropMarkers()
   } catch (e) {
     toast.error('Search failed: ' + e.message)
