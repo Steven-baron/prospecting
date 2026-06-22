@@ -407,28 +407,23 @@ def push_to_crm(prospect_names):
 			continue
 
 		try:
-			# ── 1. Create or reuse CRM Organization ──────────────────────────
-			org_name = frappe.db.exists('CRM Organization', {'organization_name': p.prospect_name})
-			if not org_name:
-				org = frappe.get_doc({
-					'doctype':           'CRM Organization',
-					'organization_name': p.prospect_name,
-					'website':           p.website or '',
-				})
-				org.insert(ignore_permissions=True)
-				org_name = org.name
-
-			# ── 2. Create CRM Lead (placeholder person = company name) ────────
+			# ── 1. Create CRM Lead (placeholder person = company name) ────────
+			# first_name is a placeholder — user updates it once they get a real contact name
 			lead = frappe.new_doc('CRM Lead')
-			lead.first_name   = p.prospect_name   # placeholder — update once real contact is known
+			lead.first_name   = p.prospect_name
 			lead.lead_name    = p.prospect_name
-			lead.organization = p.prospect_name   # text field on Lead
+			lead.organization = p.prospect_name
 			lead.email        = p.email_id or ''
 			lead.mobile_no    = p.mobile_no or ''
 			lead.phone        = p.mobile_no or ''
 			lead.website      = p.website or ''
 			lead.source       = _get_or_create_source('Prospecting')
 			lead.insert(ignore_permissions=True)
+
+			# ── 2. Link to CRM Organization via CRM's own mechanism ───────────
+			# create_organization() finds/creates the org and calls db_set("organization", org_name)
+			# which is how CRM properly links a lead to its organization
+			lead.create_organization()
 
 			# ── 3. Sync notes → FCRM Note on the Lead ────────────────────────
 			_sync_note_to_crm(p, lead.name)
