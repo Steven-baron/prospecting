@@ -54,6 +54,35 @@ PLACE_CATEGORIES = [
 
 
 @frappe.whitelist()
+def setup_crm_custom_fields(*args, **kwargs):
+	"""One-time: create custom fields on CRM doctypes. Run once after install."""
+	FIELDS = [
+		dict(dt='CRM Lead', fieldname='custom_prospect', label='Source Prospect',
+		     fieldtype='Link', options='Prospect', insert_after='source', read_only=1),
+		dict(dt='CRM Lead', fieldname='custom_google_rating', label='Google Rating',
+		     fieldtype='Float', insert_after='custom_prospect', read_only=1),
+		dict(dt='CRM Organization', fieldname='custom_prospect', label='Source Prospect',
+		     fieldtype='Link', options='Prospect', insert_after='website', read_only=1),
+		dict(dt='CRM Organization', fieldname='custom_google_rating', label='Google Rating',
+		     fieldtype='Float', insert_after='custom_prospect', read_only=1),
+		dict(dt='CRM Organization', fieldname='custom_google_maps_url', label='Google Maps URL',
+		     fieldtype='Data', options='URL', insert_after='custom_google_rating', read_only=1),
+		dict(dt='CRM Organization', fieldname='custom_address_text', label='Address',
+		     fieldtype='Small Text', insert_after='custom_google_maps_url', read_only=1),
+	]
+	created = []
+	for f in FIELDS:
+		name = f'{f["dt"]}-{f["fieldname"]}'
+		if not frappe.db.exists('Custom Field', name):
+			cf = frappe.new_doc('Custom Field')
+			cf.update(f)
+			cf.insert(ignore_permissions=True)
+			created.append(name)
+	frappe.db.commit()
+	return {'created': created}
+
+
+@frappe.whitelist()
 def get_maps_api_key():
 	settings = frappe.get_single('Prospecting Settings')
 	return settings.get_password('google_maps_api_key') or ''
@@ -395,47 +424,62 @@ def push_to_crm(prospect_names):
 		prospect_names = json.loads(prospect_names)
 
 	created, skipped, errors = 0, 0, []
+	lead_names = {}  # prospect_name → crm lead name
 
 	for pname in prospect_names:
 		p = frappe.get_doc('Prospect', pname)
 
-		# If a lead already exists for this org, just sync notes
-		existing_lead = frappe.db.exists('CRM Lead', {'organization': p.prospect_name})
+		# If prospect already has a linked lead, just sync notes
+		existing_lead = p.crm_lead or frappe.db.exists('CRM Lead', {'custom_prospect': pname})
 		if existing_lead:
 			_sync_note_to_crm(p, existing_lead)
+			lead_names[pname] = existing_lead
 			skipped += 1
 			continue
 
 		try:
 			# ── 1. Create CRM Lead (placeholder person = company name) ────────
-			# first_name is a placeholder — user updates it once they get a real contact name
+			# first_name is a placeholder — user updates it once a real contact is identified
 			lead = frappe.new_doc('CRM Lead')
-			lead.first_name   = p.prospect_name
-			lead.lead_name    = p.prospect_name
-			lead.organization = p.prospect_name
-			lead.email        = p.email_id or ''
-			lead.mobile_no    = p.mobile_no or ''
-			lead.phone        = p.mobile_no or ''
-			lead.website      = p.website or ''
-			lead.source       = _get_or_create_source('Prospecting')
+			lead.first_name          = p.prospect_name
+			lead.lead_name           = p.prospect_name
+			lead.organization        = p.prospect_name
+			lead.email               = p.email_id or ''
+			lead.mobile_no           = p.mobile_no or ''
+			lead.phone               = p.mobile_no or ''
+			lead.website             = p.website or ''
+			lead.source              = _get_or_create_source('Prospecting')
+			lead.custom_prospect     = pname
+			lead.custom_google_rating = p.rating or 0
 			lead.insert(ignore_permissions=True)
 
 			# ── 2. Link to CRM Organization via CRM's own mechanism ───────────
-			# create_organization() finds/creates the org and calls db_set("organization", org_name)
-			# which is how CRM properly links a lead to its organization
-			lead.create_organization()
+			org_name = lead.create_organization()
 
-			# ── 3. Sync notes → FCRM Note on the Lead ────────────────────────
+			# ── 3. Populate custom fields on the CRM Organization ────────────
+			if org_name:
+				frappe.db.set_value('CRM Organization', org_name, {
+					'custom_prospect':        pname,
+					'custom_google_rating':   p.rating or 0,
+					'custom_google_maps_url': p.google_maps_uri or '',
+					'custom_address_text':    p.address or '',
+				})
+
+			# ── 4. Sync notes → FCRM Note on the Lead ────────────────────────
 			_sync_note_to_crm(p, lead.name)
 
-			# ── 4. Mark prospect as Qualified ────────────────────────────────
-			frappe.db.set_value('Prospect', pname, 'status', 'Qualified')
+			# ── 5. Store lead reference + mark Qualified ──────────────────────
+			frappe.db.set_value('Prospect', pname, {
+				'status':   'Qualified',
+				'crm_lead': lead.name,
+			})
+			lead_names[pname] = lead.name
 			created += 1
 		except Exception as e:
 			errors.append({'prospect': pname, 'error': str(e)})
 
 	frappe.db.commit()
-	return {'created': created, 'skipped': skipped, 'errors': errors}
+	return {'created': created, 'skipped': skipped, 'errors': errors, 'lead_names': lead_names}
 
 
 def _sync_note_to_crm(prospect, lead_name):

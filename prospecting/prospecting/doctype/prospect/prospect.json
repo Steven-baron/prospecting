@@ -35,7 +35,8 @@
   "col_break_additional",
   "territory",
   "section_notes",
-  "notes"
+  "notes",
+  "crm_lead"
  ],
  "fields": [
   {
@@ -210,6 +211,13 @@
    "fieldname": "notes",
    "fieldtype": "Text Editor",
    "label": "Notes"
+  },
+  {
+   "fieldname": "crm_lead",
+   "fieldtype": "Data",
+   "label": "CRM Lead",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "links": [],
@@ -250,11 +258,26 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [
-  {"color": "Blue",   "title": "New"},
-  {"color": "Yellow", "title": "Contacted"},
-  {"color": "Purple", "title": "Qualified"},
-  {"color": "Green",  "title": "Won"},
-  {"color": "Red",    "title": "Lost"}
+  {
+   "color": "Blue",
+   "title": "New"
+  },
+  {
+   "color": "Yellow",
+   "title": "Contacted"
+  },
+  {
+   "color": "Purple",
+   "title": "Qualified"
+  },
+  {
+   "color": "Green",
+   "title": "Won"
+  },
+  {
+   "color": "Red",
+   "title": "Lost"
+  }
  ],
  "title_field": "prospect_name",
  "track_changes": 1

@@ -76,6 +76,13 @@
           </a>
         </div>
 
+        <!-- CRM link (shown after push) -->
+        <div v-if="doc.crm_lead">
+          <a :href="`/crm/leads/${doc.crm_lead}`" target="_blank" rel="noreferrer">
+            <Button label="View in CRM" variant="outline" class="w-full justify-center" />
+          </a>
+        </div>
+
         <!-- Notes -->
         <div>
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Notes</p>
@@ -177,6 +184,7 @@ async function pushOneToCRM() {
     if (r.created) {
       toast.success('Lead created in CRM')
       props.doc.status = 'Qualified'
+      props.doc.crm_lead = r.lead_names?.[props.doc.name] || props.doc.crm_lead
       emit('status-updated', { name: props.doc.name, status: 'Qualified' })
     } else if (r.skipped) {
       toast.warning('Lead already exists in CRM')
