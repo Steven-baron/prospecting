@@ -67,7 +67,7 @@
               'bg-surface-blue-1': selected.has(r.placeId),
               'ring-2 ring-inset ring-ink-blue-2': highlightedId === r.placeId,
             }"
-            @click="panTo(r)">
+            @click="openDrawer(r)">
             <div class="flex-shrink-0 flex items-start pt-0.5" @click.stop="toggleSelect(r.placeId)">
               <input type="checkbox"
                 :checked="selected.has(r.placeId)"
@@ -91,8 +91,8 @@
         </div>
       </div>
 
-      <!-- Map panel -->
-      <div class="relative flex-1">
+      <!-- Map + detail drawer -->
+      <div class="relative flex-1 overflow-hidden">
         <div ref="mapEl" class="h-full w-full" />
         <div v-if="!mapReady"
           class="absolute inset-0 flex items-center justify-center bg-surface-gray-1 text-ink-gray-5">
@@ -101,6 +101,67 @@
             <p class="text-sm">Select a city to see its boundary, then search.</p>
           </div>
         </div>
+
+        <!-- Detail drawer -->
+        <Transition name="drawer">
+          <div v-if="activeResult"
+            class="absolute inset-y-0 right-0 w-[500px] flex flex-col bg-surface-white border-l shadow-xl z-10 overflow-hidden">
+
+            <!-- Header -->
+            <div class="flex items-start gap-3 px-4 py-3 border-b flex-shrink-0">
+              <div class="flex-1 min-w-0">
+                <h2 class="text-sm font-semibold text-ink-gray-9 leading-snug">{{ activeResult.businessName }}</h2>
+                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span v-if="activeResult.rating != null" class="text-xs text-amber-600 font-medium">★ {{ activeResult.rating }}</span>
+                  <Badge v-if="activeResult.category" :label="activeResult.category" theme="gray" size="sm" />
+                </div>
+              </div>
+              <button @click="activeResult = null"
+                class="flex-shrink-0 rounded p-1 text-ink-gray-4 hover:bg-surface-gray-2 hover:text-ink-gray-7">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <!-- Details -->
+            <div class="px-4 py-3 border-b flex-shrink-0 space-y-1.5">
+              <p v-if="activeResult.address" class="text-xs text-ink-gray-6">{{ activeResult.address }}</p>
+              <p v-if="activeResult.phone" class="text-xs text-ink-gray-5">{{ activeResult.phone }}</p>
+              <div v-if="activeResult.website" class="flex items-center gap-2">
+                <span class="flex-1 text-xs text-ink-gray-4 truncate">{{ activeResult.website }}</span>
+                <a :href="activeResult.website" target="_blank" rel="noreferrer"
+                  class="flex-shrink-0 text-xs text-ink-blue-2 hover:underline">Open in new tab ↗</a>
+              </div>
+            </div>
+
+            <!-- Website iframe -->
+            <template v-if="activeResult.website">
+              <div v-if="iframeStatus === 'loading'" class="flex-1 flex items-center justify-center text-ink-gray-4 text-sm">
+                Loading…
+              </div>
+              <div v-if="iframeStatus === 'blocked'" class="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <p class="text-sm text-ink-gray-5">This website can't be previewed here.</p>
+                <a :href="activeResult.website" target="_blank" rel="noreferrer">
+                  <Button label="Open in new tab ↗" variant="outline" size="sm" />
+                </a>
+              </div>
+              <iframe
+                v-show="iframeStatus === 'loaded'"
+                :key="activeResult.placeId"
+                :src="activeResult.website"
+                class="flex-1 w-full border-none"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                referrerpolicy="no-referrer"
+                @load="onIframeLoad"
+                @error="iframeStatus = 'blocked'"
+              />
+            </template>
+            <div v-else class="flex-1 flex items-center justify-center text-sm text-ink-gray-4">
+              No website listed
+            </div>
+
+          </div>
+        </Transition>
       </div>
     </div>
 
@@ -175,11 +236,13 @@ const saveModeOptions = computed(() => {
 })
 
 // Map state
-const mapEl        = ref(null)
-const mapReady     = ref(false)
-const locInputEl   = ref(null)
+const mapEl         = ref(null)
+const mapReady      = ref(false)
+const locInputEl    = ref(null)
 const resultsListEl = ref(null)
 const highlightedId = ref(null)
+const activeResult  = ref(null)
+const iframeStatus  = ref('loading')  // 'loading' | 'loaded' | 'blocked'
 let map = null, markers = [], cityFeatures = [], cityGeoJson = null
 
 // Save state
@@ -291,8 +354,7 @@ function dropMarkers() {
     const m = new google.maps.Marker({ position: { lat: r.lat, lng: r.lng }, map, title: r.businessName })
     m.addListener('click', () => {
       highlightedId.value = r.placeId
-      panTo(r)
-      // Scroll the matching row into view in the results list
+      openDrawer(r)
       const row = resultsListEl.value?.querySelector(`[data-place-id="${r.placeId}"]`)
       row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     })
@@ -309,6 +371,28 @@ function panTo(r) {
   if ((map.getZoom() || 0) < 14) map.setZoom(15)
 }
 
+function openDrawer(r) {
+  iframeStatus.value = 'loading'
+  activeResult.value = r
+  panTo(r)
+}
+
+function onIframeLoad(e) {
+  // Detect X-Frame-Options block: iframe loads but contentDocument is inaccessible
+  // or its URL is about:blank (browser silently blocked it)
+  try {
+    const doc = e.target.contentDocument
+    if (!doc || doc.location.href === 'about:blank') {
+      iframeStatus.value = 'blocked'
+    } else {
+      iframeStatus.value = 'loaded'
+    }
+  } catch (_) {
+    // Cross-origin access denied = the page DID load (cross-origin is expected)
+    iframeStatus.value = 'loaded'
+  }
+}
+
 async function search() {
   // Use category label as the search term when WHAT is left blank
   const effectiveWhat = what.value.trim() || categoryOption.value?.label || ''
@@ -323,9 +407,10 @@ async function search() {
     bounds_arg = JSON.stringify({ north: ne.lat(), east: ne.lng(), south: sw.lat(), west: sw.lng() })
   }
 
-  searching.value   = true
-  selected.value    = new Set()
+  searching.value     = true
+  selected.value      = new Set()
   highlightedId.value = null
+  activeResult.value  = null
   clearMarkers()
   try {
     const r = await call('prospecting.api.search_places', {
@@ -378,3 +463,14 @@ async function save() {
   }
 }
 </script>
+
+<style scoped>
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: transform 0.2s ease;
+}
+.drawer-enter-from,
+.drawer-leave-to {
+  transform: translateX(100%);
+}
+</style>
