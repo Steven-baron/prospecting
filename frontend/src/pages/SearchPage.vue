@@ -52,7 +52,7 @@
             @click="showSaveDialog = true" />
         </div>
 
-        <div class="flex-1 overflow-y-auto">
+        <div ref="resultsListEl" class="flex-1 overflow-y-auto">
           <div v-if="!results.length && !searching"
             class="flex flex-col items-center justify-center h-full gap-3 text-ink-gray-5 p-8">
             <div class="text-3xl opacity-40">🔍</div>
@@ -61,10 +61,13 @@
 
           <div
             v-for="r in results" :key="r.placeId"
+            :data-place-id="r.placeId"
             class="flex gap-3 px-4 py-3 border-b cursor-pointer transition-colors hover:bg-surface-gray-1"
-            :class="{ 'bg-surface-blue-1': selected.has(r.placeId) }"
-            @mouseenter="panTo(r)"
-            @click="toggleSelect(r.placeId)">
+            :class="{
+              'bg-surface-blue-1': selected.has(r.placeId),
+              'ring-2 ring-inset ring-ink-blue-2': highlightedId === r.placeId,
+            }"
+            @click="toggleSelect(r.placeId); panTo(r)">
             <input type="checkbox"
               :checked="selected.has(r.placeId)"
               @click.stop @change="toggleSelect(r.placeId)"
@@ -170,9 +173,11 @@ const saveModeOptions = computed(() => {
 })
 
 // Map state
-const mapEl     = ref(null)
-const mapReady  = ref(false)
-const locInputEl = ref(null)
+const mapEl        = ref(null)
+const mapReady     = ref(false)
+const locInputEl   = ref(null)
+const resultsListEl = ref(null)
+const highlightedId = ref(null)
 let map = null, markers = [], cityFeatures = []
 
 // Save state
@@ -262,7 +267,13 @@ function dropMarkers() {
   if (!valid.length) return
   valid.forEach(r => {
     const m = new google.maps.Marker({ position: { lat: r.lat, lng: r.lng }, map, title: r.businessName })
-    m.addListener('click', () => toggleSelect(r.placeId))
+    m.addListener('click', () => {
+      highlightedId.value = r.placeId
+      panTo(r)
+      // Scroll the matching row into view in the results list
+      const row = resultsListEl.value?.querySelector(`[data-place-id="${r.placeId}"]`)
+      row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
     markers.push(m)
   })
   const b = new google.maps.LatLngBounds()
@@ -290,8 +301,9 @@ async function search() {
     bounds_arg = JSON.stringify({ north: ne.lat(), east: ne.lng(), south: sw.lat(), west: sw.lng() })
   }
 
-  searching.value = true
-  selected.value  = new Set()
+  searching.value   = true
+  selected.value    = new Set()
+  highlightedId.value = null
   clearMarkers()
   try {
     const r = await call('prospecting.api.search_places', {
