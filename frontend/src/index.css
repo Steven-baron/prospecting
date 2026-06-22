@@ -25,11 +25,6 @@ html, body {
   width: 340px;
   border-left-color: var(--outline-gray-1, #e5e7eb);
 }
-/* Make frappe-ui Select dropdowns scrollable when they exceed viewport height */
-[data-reka-select-viewport] {
-  max-height: var(--reka-select-content-available-height, 60vh);
-  overflow-y: auto;
-}
 
 .pm-detail-inner {
   width: 340px;

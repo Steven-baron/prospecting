@@ -21,7 +21,7 @@
         </div>
         <div class="flex-1 min-w-28">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</p>
-          <Select :options="categories" v-model="category" placeholder="Any" />
+          <Autocomplete :options="categories" v-model="categoryOption" placeholder="Any category" />
         </div>
         <div class="w-24">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
@@ -139,7 +139,7 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, TextInput, Select, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import { Button, TextInput, Select, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
 
 const router      = useRouter()
@@ -149,7 +149,7 @@ const reloadLists = inject('reloadLists', () => {})
 // Search state
 const what      = ref('')
 const whereText = ref('')
-const category  = ref('')
+const categoryOption = ref(null)   // { label, value } object for Autocomplete
 const depth     = ref('2')
 const categories = ref([])
 const results    = ref([])
@@ -291,7 +291,7 @@ async function search() {
   clearMarkers()
   try {
     const r = await call('prospecting.api.search_places', {
-      query, included_type: category.value,
+      query, included_type: categoryOption.value?.value || '',
       max_pages: parseInt(depth.value),
       bounds: bounds_arg,
     })
