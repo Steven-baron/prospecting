@@ -90,10 +90,47 @@ def get_maps_api_key():
 
 @frappe.whitelist()
 def get_place_categories():
+	"""Return only active categories for the search dropdown."""
 	settings = frappe.get_single('Prospecting Settings')
 	if settings.categories:
-		return [{'label': r.label, 'value': r.value} for r in settings.categories]
+		return [
+			{'label': r.label, 'value': r.value}
+			for r in settings.categories
+			if r.active
+		]
 	return PLACE_CATEGORIES
+
+
+@frappe.whitelist()
+def get_all_categories():
+	"""Return all categories (including inactive) for the settings UI."""
+	settings = frappe.get_single('Prospecting Settings')
+	if settings.categories:
+		return [
+			{'name': r.name, 'label': r.label, 'value': r.value, 'active': bool(r.active)}
+			for r in settings.categories
+		]
+	# First visit — return defaults so the settings page has something to show
+	from prospecting.install import DEFAULT_CATEGORIES
+	return [{'name': None, 'label': l, 'value': v, 'active': True} for l, v in DEFAULT_CATEGORIES]
+
+
+@frappe.whitelist()
+def save_categories(categories):
+	"""Save the full categories list from the settings UI."""
+	if isinstance(categories, str):
+		categories = frappe.parse_json(categories)
+	settings = frappe.get_single('Prospecting Settings')
+	settings.categories = []
+	for c in categories:
+		settings.append('categories', {
+			'label':  c.get('label', '').strip(),
+			'value':  c.get('value', '').strip(),
+			'active': 1 if c.get('active') else 0,
+		})
+	settings.save(ignore_permissions=True)
+	frappe.db.commit()
+	return {'saved': len(categories)}
 
 
 @frappe.whitelist()

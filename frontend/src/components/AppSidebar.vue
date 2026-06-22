@@ -39,6 +39,11 @@
           <LucidePlus class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
+      <SidebarItem label="Settings" :isCollapsed="isCollapsed" to="/settings" :isActive="route.path === '/settings'">
+        <template #icon>
+          <LucideSettings class="size-4 text-ink-gray-6" />
+        </template>
+      </SidebarItem>
       <SidebarItem label="Home" :isCollapsed="isCollapsed" :onClick="goHome">
         <template #icon>
           <LucideHome class="size-4 text-ink-gray-6" />
@@ -62,6 +67,7 @@ import LucideUsers from '~icons/lucide/users'
 import LucidePlus from '~icons/lucide/plus'
 import LucideHome from '~icons/lucide/home'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucideSettings from '~icons/lucide/settings'
 
 const props = defineProps({
   lists:      { type: Array,  default: () => [] },
