@@ -90,6 +90,9 @@ def get_maps_api_key():
 
 @frappe.whitelist()
 def get_place_categories():
+	settings = frappe.get_single('Prospecting Settings')
+	if settings.categories:
+		return [{'label': r.label, 'value': r.value} for r in settings.categories]
 	return PLACE_CATEGORIES
 
 

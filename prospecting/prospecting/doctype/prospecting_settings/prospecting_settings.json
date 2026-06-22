@@ -5,7 +5,9 @@
  "engine": "InnoDB",
  "field_order": [
   "google_places_api_key",
-  "google_maps_api_key"
+  "google_maps_api_key",
+  "section_categories",
+  "categories"
  ],
  "fields": [
   {
@@ -19,11 +21,23 @@
    "fieldtype": "Password",
    "label": "Google Maps API Key (Public)",
    "description": "Client-side key for map display. Enable \"Maps JavaScript API\"."
+  },
+  {
+   "fieldname": "section_categories",
+   "fieldtype": "Section Break",
+   "label": "Search Categories"
+  },
+  {
+   "fieldname": "categories",
+   "fieldtype": "Table",
+   "label": "Categories",
+   "options": "Prospect Category",
+   "description": "Categories shown in the Prospecting search dropdown. Label is the display name; Google Place Type is the exact API code."
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-21 12:00:00.000000",
+ "modified": "2026-06-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Prospecting",
  "name": "Prospecting Settings",

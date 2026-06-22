@@ -9,7 +9,7 @@ website_route_rules = [
     {"from_route": "/prospecting/<path:app_path>", "to_route": "prospecting"},
 ]
 
-after_install = "prospecting.api.setup_crm_custom_fields"
+after_install = "prospecting.install.after_install"
 
 doc_events = {
     "CRM Deal": {
