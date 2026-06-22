@@ -391,12 +391,13 @@ def push_to_crm(prospect_names):
 	for pname in prospect_names:
 		p = frappe.get_doc('Prospect', pname)
 
-		# Skip if already pushed (check by organization + email match)
+		# If lead already exists, just sync notes and skip creation
 		existing = frappe.db.exists('CRM Lead', {
 			'organization': p.prospect_name,
 			'email': p.email_id or '',
 		})
 		if existing:
+			_sync_note_to_crm(p, existing)
 			skipped += 1
 			continue
 
@@ -412,23 +413,8 @@ def push_to_crm(prospect_names):
 			lead.source       = _get_or_create_source('Prospecting')
 			lead.insert(ignore_permissions=True)
 
-			# Add address + notes as a comment on the lead timeline
-			comment_parts = []
-			if p.address:
-				comment_parts.append(f'<p><strong>Address:</strong> {p.address}</p>')
-			if p.notes:
-				comment_parts.append(f'<p><strong>Notes:</strong><br>{p.notes}</p>')
-			if p.rating:
-				comment_parts.append(f'<p><strong>Google Rating:</strong> ★ {p.rating}</p>')
-			if comment_parts:
-				frappe.get_doc({
-					'doctype': 'Comment',
-					'comment_type': 'Comment',
-					'reference_doctype': 'CRM Lead',
-					'reference_name': lead.name,
-					'content': ''.join(comment_parts),
-					'comment_by': frappe.session.user,
-				}).insert(ignore_permissions=True)
+			# Save notes to CRM's native FCRM Note (shows in the Notes tab of the lead)
+			_sync_note_to_crm(p, lead.name)
 
 			# Mark the prospect as converted
 			frappe.db.set_value('Prospect', pname, 'status', 'Qualified')
@@ -438,6 +424,45 @@ def push_to_crm(prospect_names):
 
 	frappe.db.commit()
 	return {'created': created, 'skipped': skipped, 'errors': errors}
+
+
+def _sync_note_to_crm(prospect, lead_name):
+	"""Create or update an FCRM Note on the CRM Lead with the prospect's notes + metadata."""
+	# Build note content
+	lines = []
+	if prospect.notes:
+		lines.append(prospect.notes)
+	meta_parts = []
+	if prospect.address:
+		meta_parts.append(f'<strong>Address:</strong> {prospect.address}')
+	if prospect.rating:
+		meta_parts.append(f'<strong>Google Rating:</strong> ★ {prospect.rating}')
+	if meta_parts:
+		lines.append('<p>' + ' &nbsp;·&nbsp; '.join(meta_parts) + '</p>')
+
+	if not lines:
+		return
+
+	content = '\n'.join(lines)
+	title = f'Notes from Prospecting'
+
+	# Update existing note if one already exists for this lead from prospecting
+	existing_note = frappe.db.get_value('FCRM Note', {
+		'reference_doctype': 'CRM Lead',
+		'reference_docname': lead_name,
+		'title': title,
+	}, 'name')
+
+	if existing_note:
+		frappe.db.set_value('FCRM Note', existing_note, 'content', content)
+	else:
+		frappe.get_doc({
+			'doctype': 'FCRM Note',
+			'title': title,
+			'content': content,
+			'reference_doctype': 'CRM Lead',
+			'reference_docname': lead_name,
+		}).insert(ignore_permissions=True)
 
 
 def _get_or_create_source(source_name):
