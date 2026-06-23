@@ -322,9 +322,9 @@ async function loadPage(reset) {
         'owner_name',
       ],
       filters,
-      limit:       500,
-      limit_start: reset ? 0 : start.value,
-      order_by:    'modified desc',
+      limit_page_length: 500,
+      limit_start:       reset ? 0 : start.value,
+      order_by:          'modified desc',
     }) || []
     rows.forEach(r => { r._address_short = (r.address || '').split(',')[0] })
     if (reset) { prospects.value = rows } else { prospects.value.push(...rows) }
