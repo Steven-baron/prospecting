@@ -1,10 +1,20 @@
 # Deployment Guide
 
+## Overview
+
+This app is deployed as part of a custom Docker image (`ghcr.io/steven-baron/erpnext-crm`).
+All apps — including prospecting — are baked into the image at build time.
+The image build is triggered automatically by GitHub Actions when `apps.json` changes.
+
+Image build config lives at: `/home/steven/frappe` (separate repo)
+
+---
+
 ## Prerequisites
 
-- Production server running Frappe v15 with Frappe CRM installed
-- GitHub repo for this app (see Step 1)
-- SSH access to the production server
+- Production server running on Dokploy with the ERPNext stack
+- Access to the `/home/steven/frappe` image-build repo
+- `docker login ghcr.io` authenticated on your local machine
 
 ---
 
@@ -12,89 +22,104 @@
 
 ```bash
 cd /home/steven/Projects/frappedev/frappe-bench/apps/prospecting
-
-# Option A — using GitHub CLI
-gh repo create prospecting --private --source=. --push
-
-# Option B — manually
-git remote add origin https://github.com/YOUR_USERNAME/prospecting.git
+git remote add origin https://github.com/Steven-baron/prospecting.git
 git push -u origin develop
 ```
 
 ---
 
-## Step 2: Install on Production (one-time)
+## Step 2: Add app to the Docker image (one-time)
 
-SSH into your production server and run:
+Edit `/home/steven/frappe/apps.json` and add:
 
-```bash
-cd /home/frappe/frappe-bench
-
-# 1. Download the app
-bench get-app https://github.com/YOUR_USERNAME/prospecting --branch develop
-
-# 2. Install on your site
-bench --site YOUR_SITE install-app prospecting
-
-# 3. Run DB migrations
-bench --site YOUR_SITE migrate
-
-# 4. Build static assets
-bench build --app prospecting
-
-# 5. Restart
-bench restart
+```json
+{
+  "url": "https://github.com/Steven-baron/prospecting",
+  "branch": "develop"
+}
 ```
 
-### Post-install configuration
+Commit and push — GitHub Actions builds and pushes the new image automatically:
 
-1. Open the Frappe desk → search **Prospecting Settings**
-2. Enter your **Google Maps API key** (needs Places API enabled)
-3. Ensure Frappe CRM is installed — if not: `bench get-app crm && bench --site YOUR_SITE install-app crm`
+```bash
+git -C /home/steven/frappe add apps.json
+git -C /home/steven/frappe commit -m "Add prospecting app"
+git -C /home/steven/frappe push
+```
+
+> To build locally instead (faster feedback):
+> ```bash
+> cd /home/steven/frappe
+> ./build-custom-image.sh ghcr.io/steven-baron/erpnext-crm 16
+> docker push ghcr.io/steven-baron/erpnext-crm:16
+> docker push ghcr.io/steven-baron/erpnext-crm:latest
+> ```
 
 ---
 
-## Deploying Updates
+## Step 3: Redeploy on Dokploy
 
-### 1. Make your changes locally
+In Dokploy → ERPNext service → **Redeploy** (pulls the new image).
 
-If you changed any Vue/JS files, rebuild the frontend first:
+---
+
+## Step 4: Install on the site (one-time, after first deploy)
+
+Exec into the backend container:
+
+```bash
+docker exec -it <backend-container-name> bash
+```
+
+Then:
+
+```bash
+bench --site YOUR_SITE install-app prospecting
+bench build --app prospecting
+bench --site YOUR_SITE clear-cache
+```
+
+> The app is already in the image — no `.pth` files or manual cloning needed.
+
+### Post-install configuration
+
+Open the prospecting app → Settings and enter your API keys:
+- **Google Places API key** (server-side, Places API New enabled)
+- **Google Maps API key** (client-side, Maps JavaScript API enabled)
+- **OpenCode Go API key** (from opencode.ai — for AI owner name extraction)
+- **Firecrawl URL + key** (optional — for JS-rendered site email enrichment)
+
+---
+
+## Deploying Updates (Python / API changes)
+
+Push to the `develop` branch — the running container picks up Python changes on the
+next request since the app code is in the image and gunicorn reloads workers automatically.
+
+For DocType schema changes, run migrate:
+
+```bash
+bench --site YOUR_SITE migrate
+```
+
+For frontend (Vue/JS) changes, rebuild assets locally before pushing:
 
 ```bash
 cd /home/steven/Projects/frappedev/frappe-bench/apps/prospecting/frontend
 npm run build
+# commit the built files in prospecting/public/prospecting/ and push
 ```
 
-### 2. Commit and push
+Then in the backend container:
 
 ```bash
-cd /home/steven/Projects/frappedev/frappe-bench/apps/prospecting
-git add -A
-git commit -m "your message"
-git push origin develop
-```
-
-### 3. Pull and deploy on production
-
-**Full update (recommended):**
-```bash
-bench update --apps prospecting
-```
-This pulls git, runs migrations, rebuilds assets, and restarts in one command.
-
-**Manual update (faster, more control):**
-```bash
-cd apps/prospecting && git pull origin develop && cd ../..
-bench --site YOUR_SITE migrate
 bench build --app prospecting
-bench restart
+bench --site YOUR_SITE clear-cache
 ```
 
 ---
 
 ## Local Development
-
-The app runs inside Docker. The frontend dev loop:
 
 ```bash
 # Rebuild frontend after Vue/JS changes
