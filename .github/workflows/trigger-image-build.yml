@@ -1,0 +1,24 @@
+name: Trigger image rebuild
+
+# Fires whenever code lands on develop — notifies the image-build repo
+# (Steven-baron/ERPNEX-Dockploy) to rebuild and push ghcr.io/steven-baron/erpnext-crm.
+#
+# Required secret: IMAGE_BUILD_TOKEN
+#   A GitHub PAT (classic) with `repo` scope on ERPNEX-Dockploy.
+#   Add it at: github.com/Steven-baron/prospecting → Settings → Secrets → Actions
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch image rebuild
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.IMAGE_BUILD_TOKEN }}
+          repository: Steven-baron/ERPNEX-Dockploy
+          event-type: app-updated
+          client-payload: '{"app": "prospecting", "ref": "${{ github.sha }}"}'
