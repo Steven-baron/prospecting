@@ -264,8 +264,12 @@ async function toggleMap() {
 }
 
 function handleRowClick(row) {
-  if (showMap.value) panTo(row)
-  else openDetail(row.name)
+  if (showMap.value) {
+    panTo(row)
+    if (openDoc.value) openDetail(row.name)
+  } else {
+    openDetail(row.name)
+  }
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
