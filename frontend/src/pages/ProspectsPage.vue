@@ -75,7 +75,7 @@
               {{ item != null ? `★ ${Number(item).toFixed(1)}` : '—' }}
             </span>
             <div v-else-if="column.key === '_actions'" class="flex justify-end items-center gap-0.5" @click.stop>
-              <button @click="openDrawer(row)"
+              <button @click="openDetail(row.name)"
                 class="rounded p-1 text-ink-gray-3 hover:bg-surface-gray-2 hover:text-ink-gray-7"
                 title="View details">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" viewBox="0 0 24 24" fill="none"
@@ -118,66 +118,6 @@
           class="absolute inset-0 flex items-center justify-center bg-surface-gray-1 text-ink-gray-5 pointer-events-none">
           <p class="text-sm">No location data for prospects in this list.</p>
         </div>
-
-        <!-- Detail drawer -->
-        <Transition name="drawer">
-          <div v-if="activeRow"
-            class="absolute inset-y-0 right-0 w-[480px] flex flex-col bg-surface-white border-l shadow-xl z-10 overflow-hidden">
-
-            <!-- Header -->
-            <div class="flex items-start gap-3 px-4 py-3 border-b flex-shrink-0">
-              <div class="flex-1 min-w-0">
-                <h2 class="text-sm font-semibold text-ink-gray-9 leading-snug">{{ activeRow.prospect_name }}</h2>
-                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span v-if="activeRow.rating != null" class="text-xs text-amber-600 font-medium">
-                    ★ {{ activeRow.rating }}
-                    <template v-if="activeRow.review_count">
-                      ({{ Number(activeRow.review_count).toLocaleString() }} reviews)
-                    </template>
-                  </span>
-                  <Badge v-if="activeRow.category" :label="activeRow.category" theme="gray" size="sm" />
-                </div>
-              </div>
-              <button @click="activeRow = null"
-                class="flex-shrink-0 rounded p-1 text-ink-gray-4 hover:bg-surface-gray-2 hover:text-ink-gray-7">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-
-            <!-- Details -->
-            <div class="px-4 py-4 space-y-3 overflow-y-auto flex-1">
-              <div v-if="activeRow.address" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span class="text-sm text-ink-gray-7">{{ activeRow.address }}</span>
-              </div>
-              <div v-if="activeRow.mobile_no" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.87a16 16 0 0 0 6.09 6.09l1.77-1.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
-                <a :href="`tel:${activeRow.mobile_no}`" class="text-sm text-ink-blue-2 hover:underline">{{ activeRow.mobile_no }}</a>
-              </div>
-              <div v-if="activeRow.website" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10ZM2 12h20"/></svg>
-                <a :href="activeRow.website" target="_blank" rel="noreferrer"
-                  class="text-sm text-ink-blue-2 hover:underline break-all">{{ activeRow.website }}</a>
-              </div>
-              <div class="flex gap-2 items-center pt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <Select :options="STATUSES" :model-value="activeRow.status" size="sm" variant="subtle"
-                  @update:model-value="v => updateStatus(activeRow.name, v)" />
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="flex gap-2 px-4 py-3 border-t flex-shrink-0">
-              <Button label="Full Details" variant="subtle" size="sm"
-                class="flex-1 justify-center" @click="openDetail(activeRow.name)" />
-              <a v-if="activeRow.crm_lead" :href="`/crm/leads/${activeRow.crm_lead}`"
-                target="_blank" rel="noreferrer">
-                <Button label="View in CRM" variant="outline" size="sm" />
-              </a>
-            </div>
-          </div>
-        </Transition>
       </div>
 
       <!-- Full detail slide-over -->
@@ -241,9 +181,8 @@ const removing     = ref(false)
 const pushing      = ref(false)
 
 // Map state
-const showMap   = ref(false)
-const mapEl     = ref(null)
-const activeRow = ref(null)
+const showMap = ref(false)
+const mapEl   = ref(null)
 let map = null, markers = []
 
 const pageTitle = computed(() => {
@@ -295,7 +234,7 @@ function dropMarkers() {
       map,
       title: p.prospect_name,
     })
-    m.addListener('click', () => openDrawer(p))
+    m.addListener('click', () => { panTo(p); openDetail(p.name) })
     markers.push(m)
   })
   if (valid.length === 1) {
@@ -324,23 +263,9 @@ async function toggleMap() {
   }
 }
 
-async function openDrawer(row) {
-  activeRow.value = row
-  if (!showMap.value) {
-    showMap.value = true
-    await ensureMapReady()
-    dropMarkers()
-  }
-  panTo(row)
-}
-
 function handleRowClick(row) {
-  if (showMap.value) {
-    panTo(row)
-    if (activeRow.value) activeRow.value = row
-  } else {
-    openDetail(row.name)
-  }
+  if (showMap.value) panTo(row)
+  else openDetail(row.name)
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -353,7 +278,6 @@ async function reload() {
   start.value        = 0
   hasMore.value      = false
   openDoc.value      = null
-  activeRow.value    = null
   selectedRows.value = new Set()
   await loadPage(true)
 }
@@ -395,7 +319,6 @@ async function updateStatus(name, status) {
   await call('frappe.client.set_value', { doctype: 'Prospect', name, fieldname: 'status', value: status })
   const p = prospects.value.find(p => p.name === name)
   if (p) p.status = status
-  if (activeRow.value?.name === name) activeRow.value.status = status
 }
 
 function onStatusUpdated({ name, status }) {
@@ -409,7 +332,6 @@ async function deleteProspect(name) {
   await call('frappe.client.delete', { doctype: 'Prospect', name })
   prospects.value = prospects.value.filter(p => p.name !== name)
   if (openDoc.value?.name === name) openDoc.value = null
-  if (activeRow.value?.name === name) activeRow.value = null
   if (map) dropMarkers()
   reloadLists()
   toast.success('Prospect deleted')
@@ -422,7 +344,6 @@ async function doRemoveFromList(names, unselectAll) {
     const r = await call('prospecting.api.remove_from_list', { prospect_names: names })
     prospects.value = prospects.value.filter(p => !names.includes(p.name))
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
-    if (activeRow.value && names.includes(activeRow.value.name)) activeRow.value = null
     if (map) dropMarkers()
     unselectAll?.()
     reloadLists()
@@ -468,13 +389,3 @@ async function confirmDeleteList() {
 }
 </script>
 
-<style scoped>
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: transform 0.2s ease;
-}
-.drawer-enter-from,
-.drawer-leave-to {
-  transform: translateX(100%);
-}
-</style>

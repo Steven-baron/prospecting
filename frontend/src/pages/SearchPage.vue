@@ -97,7 +97,7 @@
         </div>
       </div>
 
-      <!-- Map + detail drawer -->
+      <!-- Map panel -->
       <div class="relative flex-1 overflow-hidden">
         <div ref="mapEl" class="h-full w-full" />
         <div v-if="!mapReady"
@@ -107,50 +107,10 @@
             <p class="text-sm">Select a city to see its boundary, then search.</p>
           </div>
         </div>
-
-        <!-- Detail drawer -->
-        <Transition name="drawer">
-          <div v-if="activeResult"
-            class="absolute inset-y-0 right-0 w-[500px] flex flex-col bg-surface-white border-l shadow-xl z-10 overflow-hidden">
-
-            <!-- Header -->
-            <div class="flex items-start gap-3 px-4 py-3 border-b flex-shrink-0">
-              <div class="flex-1 min-w-0">
-                <h2 class="text-sm font-semibold text-ink-gray-9 leading-snug">{{ activeResult.businessName }}</h2>
-                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span v-if="activeResult.rating != null" class="text-xs text-amber-600 font-medium">
-                    ★ {{ activeResult.rating }}<template v-if="activeResult.reviewCount"> ({{ activeResult.reviewCount.toLocaleString() }} reviews)</template>
-                  </span>
-                  <Badge v-if="activeResult.category" :label="activeResult.category" theme="gray" size="sm" />
-                </div>
-              </div>
-              <button @click="activeResult = null"
-                class="flex-shrink-0 rounded p-1 text-ink-gray-4 hover:bg-surface-gray-2 hover:text-ink-gray-7">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-
-            <!-- Details -->
-            <div class="px-4 py-4 space-y-3 overflow-y-auto flex-1">
-              <div v-if="activeResult.address" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span class="text-sm text-ink-gray-7">{{ activeResult.address }}</span>
-              </div>
-              <div v-if="activeResult.phone" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.87a16 16 0 0 0 6.09 6.09l1.77-1.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
-                <a :href="`tel:${activeResult.phone}`" class="text-sm text-ink-blue-2 hover:underline">{{ activeResult.phone }}</a>
-              </div>
-              <div v-if="activeResult.website" class="flex gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 mt-0.5 flex-shrink-0 text-ink-gray-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10ZM2 12h20"/></svg>
-                <a :href="activeResult.website" target="_blank" rel="noreferrer"
-                  class="text-sm text-ink-blue-2 hover:underline break-all">{{ activeResult.website }}</a>
-              </div>
-            </div>
-
-          </div>
-        </Transition>
       </div>
+
+      <!-- Search result detail panel -->
+      <SearchResultDetail :result="activeResult" @close="activeResult = null" />
     </div>
 
     <!-- Save to List dialog -->
@@ -194,6 +154,7 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, TextInput, Select, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
 
 const router      = useRouter()
@@ -441,13 +402,3 @@ async function save() {
 }
 </script>
 
-<style scoped>
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: transform 0.2s ease;
-}
-.drawer-enter-from,
-.drawer-leave-to {
-  transform: translateX(100%);
-}
-</style>
