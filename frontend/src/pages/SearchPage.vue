@@ -118,7 +118,9 @@
               <div class="flex-1 min-w-0">
                 <h2 class="text-sm font-semibold text-ink-gray-9 leading-snug">{{ activeResult.businessName }}</h2>
                 <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span v-if="activeResult.rating != null" class="text-xs text-amber-600 font-medium">★ {{ activeResult.rating }}</span>
+                  <span v-if="activeResult.rating != null" class="text-xs text-amber-600 font-medium">
+                    ★ {{ activeResult.rating }}<template v-if="activeResult.reviewCount"> ({{ activeResult.reviewCount.toLocaleString() }} reviews)</template>
+                  </span>
                   <Badge v-if="activeResult.category" :label="activeResult.category" theme="gray" size="sm" />
                 </div>
               </div>
