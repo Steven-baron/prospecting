@@ -2,19 +2,23 @@
 
 ## Overview
 
-This app is deployed as part of a custom Docker image (`ghcr.io/steven-baron/erpnext-crm`).
-All apps — including prospecting — are baked into the image at build time.
-The image build is triggered automatically by GitHub Actions when `apps.json` changes.
+The Docker image is built by the **frappe-platform** repo (`/home/steven/frappe-platform`),
+which clones this app from GitHub and layers it on top of the base ERPNext image.
 
-Image build config lives at: `/home/steven/frappe` (separate repo)
+Pushing to `develop` here fires a `repository_dispatch` to frappe-platform
+(`.github/workflows/build.yml`), which rebuilds `ghcr.io/steven-baron/erpnext-crm:16`
+in ~1-2 min. Requires the `PLATFORM_TOKEN` secret (PAT with `repo` scope on
+frappe-platform) in this repo's Actions secrets.
+
+**Build time:** ~1-2 minutes (the heavy base image is built separately, rarely)
 
 ---
 
 ## Prerequisites
 
 - Production server running on Dokploy with the ERPNext stack
-- Access to the `/home/steven/frappe` image-build repo
-- `docker login ghcr.io` authenticated on your local machine
+- `PLATFORM_TOKEN` secret set in this repo (Settings → Secrets → Actions)
+- The frappe-platform repo set up with `build-apps.yml` (see its README)
 
 ---
 
@@ -28,31 +32,19 @@ git push -u origin develop
 
 ---
 
-## Step 2: Add app to the Docker image (one-time)
+## Step 2: Push to develop
 
-Edit `/home/steven/frappe/apps.json` and add:
+Pushing to `develop` automatically:
+1. Fires `repository_dispatch` → frappe-platform `build-apps.yml`
+2. frappe-platform clones this app, builds the layer, pushes `:16` to GHCR
 
-```json
-{
-  "url": "https://github.com/Steven-baron/prospecting",
-  "branch": "develop"
-}
-```
+GitHub Actions handles this — no manual image build needed.
 
-Commit and push — GitHub Actions builds and pushes the new image automatically:
-
-```bash
-git -C /home/steven/frappe add apps.json
-git -C /home/steven/frappe commit -m "Add prospecting app"
-git -C /home/steven/frappe push
-```
-
-> To build locally instead (faster feedback):
+> To build the image manually, do it from the frappe-platform repo:
 > ```bash
-> cd /home/steven/frappe
-> ./build-custom-image.sh ghcr.io/steven-baron/erpnext-crm 16
+> cd /home/steven/frappe-platform
+> ./build-local.sh --fast        # reuses base, rebuilds apps layer
 > docker push ghcr.io/steven-baron/erpnext-crm:16
-> docker push ghcr.io/steven-baron/erpnext-crm:latest
 > ```
 
 ---
@@ -60,6 +52,12 @@ git -C /home/steven/frappe push
 ## Step 3: Redeploy on Dokploy
 
 In Dokploy → ERPNext service → **Redeploy** (pulls the new image).
+
+> To force-recreate from VPS (if Dokploy doesn't pull the new image):
+> ```bash
+> docker compose -f /etc/dokploy/compose/digitallunas-erpnext-kpogqs/code/docker-compose.yml \
+>   up -d --force-recreate --no-deps backend
+> ```
 
 ---
 
@@ -91,30 +89,36 @@ Open the prospecting app → Settings and enter your API keys:
 
 ---
 
-## Deploying Updates (Python / API changes)
+## Deploying Updates
 
-Push to the `develop` branch — the running container picks up Python changes on the
-next request since the app code is in the image and gunicorn reloads workers automatically.
+### Frontend (Vue/JS) changes
 
-For DocType schema changes, run migrate:
-
-```bash
-bench --site YOUR_SITE migrate
-```
-
-For frontend (Vue/JS) changes, rebuild assets locally before pushing:
+Build locally before pushing — the built files are committed to git and baked into the image:
 
 ```bash
 cd /home/steven/Projects/frappedev/frappe-bench/apps/prospecting/frontend
 npm run build
-# commit the built files in prospecting/public/prospecting/ and push
+git add ../prospecting/public/prospecting/
+git commit -m "build: update frontend assets"
+git push origin develop
 ```
 
-Then in the backend container:
+GitHub Actions then builds the thin layer image (~1 min). After Dokploy redeploys, run in the backend container:
 
 ```bash
-bench build --app prospecting
-bench --site YOUR_SITE clear-cache
+bench --site digitallunas-erpnext-0978d0-54-39-99-84.sslip.io clear-cache
+```
+
+### Python / API changes
+
+Push to `develop`. Dokploy redeploys with the new image. No extra steps needed.
+
+### DocType schema changes
+
+After redeploy, run in the backend container:
+
+```bash
+bench --site digitallunas-erpnext-0978d0-54-39-99-84.sslip.io migrate
 ```
 
 ---

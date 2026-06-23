@@ -1,0 +1,25 @@
+name: Trigger platform image rebuild
+
+# Fires on push to develop and tells frappe-platform to rebuild the apps image.
+# The platform repo clones the latest prospecting code and pushes erpnext-crm:16.
+#
+# Required secret: PLATFORM_TOKEN
+#   A GitHub PAT (classic) with `repo` scope on Steven-baron/frappe-platform.
+#   Add it at: Settings → Secrets → Actions → New repository secret
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to frappe-platform
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PLATFORM_TOKEN }}
+          repository: Steven-baron/frappe-platform
+          event-type: app-updated
+          client-payload: '{"app": "prospecting", "sha": "${{ github.sha }}"}'
