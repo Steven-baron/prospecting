@@ -35,6 +35,18 @@
           <span class="ml-1 text-xs text-ink-gray-5">({{ doc.review_count || 0 }} reviews)</span>
         </div>
 
+        <!-- Owner (AI) -->
+        <div v-if="doc.owner_name">
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Owner (AI Guess)</p>
+          <p class="text-sm font-medium text-ink-gray-8">{{ doc.owner_name }}</p>
+          <template v-if="ownerExamples.length">
+            <div v-for="ex in ownerExamples" :key="ex"
+              class="mt-1.5 rounded bg-surface-gray-1 px-2.5 py-1.5 text-xs italic text-ink-gray-6 leading-relaxed">
+              "{{ ex }}"
+            </div>
+          </template>
+        </div>
+
         <!-- Address -->
         <div v-if="doc.address">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Address</p>
@@ -110,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Button, Badge, Select, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
 
@@ -125,6 +137,10 @@ const localNotes   = ref('')
 const notesSaved   = ref(false)
 const pushingOne   = ref(false)
 let notesSavedTimer = null
+
+const ownerExamples = computed(() => {
+  try { return JSON.parse(props.doc?.owner_name_context || '[]') } catch { return [] }
+})
 
 watch(() => props.doc, (d) => {
   localNotes.value = d?.notes || ''

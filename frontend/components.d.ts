@@ -12,5 +12,6 @@ declare module 'vue' {
     ProspectDetail: typeof import('./src/components/ProspectDetail.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SearchResultDetail: typeof import('./src/components/SearchResultDetail.vue')['default']
   }
 }

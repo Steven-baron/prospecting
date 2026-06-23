@@ -6,6 +6,10 @@
  "field_order": [
   "google_places_api_key",
   "google_maps_api_key",
+  "opencode_api_key",
+  "opencode_model",
+  "firecrawl_url",
+  "firecrawl_api_key",
   "section_categories",
   "categories"
  ],
@@ -23,6 +27,32 @@
    "description": "Client-side key for map display. Enable \"Maps JavaScript API\"."
   },
   {
+   "fieldname": "opencode_api_key",
+   "fieldtype": "Password",
+   "label": "OpenCode Go API Key",
+   "description": "API key from opencode.ai/docs/go — used for AI-powered owner name extraction from reviews."
+  },
+  {
+   "fieldname": "opencode_model",
+   "fieldtype": "Select",
+   "label": "OpenCode AI Model",
+   "options": "opencode-go/deepseek-v4-flash\nopencode-go/deepseek-v4-pro\nopencode-go/kimi-k2.7\nopencode-go/kimi-k2.6\nopencode-go/glm-5.2\nopencode-go/glm-5.1\nopencode-go/mimo-v2.5-pro\nopencode-go/mimo-v2.5\nopencode-go/qwen3.7-max\nopencode-go/qwen3.7-plus\nopencode-go/qwen3.6-plus\nopencode-go/minimax-m3\nopencode-go/minimax-m2.7\nopencode-go/minimax-m2.5",
+   "default": "opencode-go/deepseek-v4-flash",
+   "description": "Model used for owner name extraction. deepseek-v4-flash is fast and economical; deepseek-v4-pro or kimi-k2.7-code give better accuracy."
+  },
+  {
+   "fieldname": "firecrawl_url",
+   "fieldtype": "Data",
+   "label": "Firecrawl URL",
+   "description": "Base URL of your self-hosted Firecrawl instance, e.g. https://firecrawl.yourdomain.com"
+  },
+  {
+   "fieldname": "firecrawl_api_key",
+   "fieldtype": "Password",
+   "label": "Firecrawl API Key",
+   "description": "Leave blank if your self-hosted instance requires no auth."
+  },
+  {
    "fieldname": "section_categories",
    "fieldtype": "Section Break",
    "label": "Search Categories"
@@ -37,7 +67,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-22 12:00:00.000000",
+ "modified": "2026-06-23 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Prospecting",
  "name": "Prospecting Settings",

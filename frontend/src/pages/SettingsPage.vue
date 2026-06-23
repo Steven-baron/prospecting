@@ -1,13 +1,66 @@
 <template>
   <div class="flex flex-1 flex-col overflow-hidden">
 
-    <!-- Page header -->
+    <!-- API Keys section -->
+    <div class="flex-shrink-0 border-b bg-surface-white px-6 py-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-ink-gray-9">API Keys & AI</h2>
+        <Button label="Save keys" variant="solid" size="sm" :loading="savingKeys" @click="saveKeys" />
+      </div>
+      <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">Google Places API Key</label>
+          <input v-model="keys.google_places_api_key" type="password" autocomplete="off"
+            placeholder="AIza…"
+            class="w-full rounded border border-outline-gray-2 px-3 py-1.5 text-sm font-mono focus:border-outline-blue-2 focus:outline-none" />
+          <p class="mt-0.5 text-xs text-ink-gray-4">Server-side key · Places API (New)</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">Google Maps API Key</label>
+          <input v-model="keys.google_maps_api_key" type="password" autocomplete="off"
+            placeholder="AIza…"
+            class="w-full rounded border border-outline-gray-2 px-3 py-1.5 text-sm font-mono focus:border-outline-blue-2 focus:outline-none" />
+          <p class="mt-0.5 text-xs text-ink-gray-4">Public key · Maps JavaScript API</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">OpenCode Go API Key</label>
+          <input v-model="keys.opencode_api_key" type="password" autocomplete="off"
+            placeholder="sk-…"
+            class="w-full rounded border border-outline-gray-2 px-3 py-1.5 text-sm font-mono focus:border-outline-blue-2 focus:outline-none" />
+          <p class="mt-0.5 text-xs text-ink-gray-4">From opencode.ai/docs/go · owner name AI</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">AI Model</label>
+          <select v-model="keys.opencode_model"
+            class="w-full rounded border border-outline-gray-2 bg-surface-white px-3 py-1.5 text-sm focus:border-outline-blue-2 focus:outline-none">
+            <option v-for="m in AI_MODELS" :key="m.value" :value="m.value">{{ m.label }}</option>
+          </select>
+          <p class="mt-0.5 text-xs text-ink-gray-4">Used for owner name extraction from reviews</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">Firecrawl URL</label>
+          <input v-model="keys.firecrawl_url" type="text" autocomplete="off"
+            placeholder="https://firecrawl.yourdomain.com"
+            class="w-full rounded border border-outline-gray-2 px-3 py-1.5 text-sm font-mono focus:border-outline-blue-2 focus:outline-none" />
+          <p class="mt-0.5 text-xs text-ink-gray-4">Self-hosted Firecrawl — fallback for JS-rendered sites</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-gray-6">Firecrawl API Key</label>
+          <input v-model="keys.firecrawl_api_key" type="password" autocomplete="off"
+            placeholder="Leave blank if no auth required"
+            class="w-full rounded border border-outline-gray-2 px-3 py-1.5 text-sm font-mono focus:border-outline-blue-2 focus:outline-none" />
+          <p class="mt-0.5 text-xs text-ink-gray-4">Optional — only needed if your instance requires auth</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page header (categories) -->
     <div class="flex-shrink-0 border-b bg-surface-white px-6 py-4 flex items-center justify-between">
       <div>
-        <h1 class="text-base font-semibold text-ink-gray-9">Search Categories</h1>
+        <h2 class="text-sm font-semibold text-ink-gray-9">Search Categories</h2>
         <p class="text-xs text-ink-gray-5 mt-0.5">{{ activeCount }} active · {{ categories.length }} total</p>
       </div>
-      <Button label="Save" variant="solid" size="sm" :loading="saving" @click="save" />
+      <Button label="Save categories" variant="solid" size="sm" :loading="saving" @click="save" />
     </div>
 
     <!-- Toolbar — switches between filter mode and selection mode -->
@@ -124,6 +177,35 @@ import { ref, computed, onMounted } from 'vue'
 import { Button, Dialog, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
 
+const AI_MODELS = [
+  { value: 'opencode-go/deepseek-v4-flash', label: 'DeepSeek V4 Flash — fast & economical' },
+  { value: 'opencode-go/deepseek-v4-pro',   label: 'DeepSeek V4 Pro — higher accuracy' },
+  { value: 'opencode-go/kimi-k2.7',         label: 'Kimi K2.7' },
+  { value: 'opencode-go/kimi-k2.6',         label: 'Kimi K2.6' },
+  { value: 'opencode-go/glm-5.2',           label: 'GLM-5.2' },
+  { value: 'opencode-go/glm-5.1',           label: 'GLM-5.1' },
+  { value: 'opencode-go/mimo-v2.5-pro',     label: 'MiMo V2.5 Pro' },
+  { value: 'opencode-go/mimo-v2.5',         label: 'MiMo V2.5' },
+  { value: 'opencode-go/qwen3.7-max',       label: 'Qwen 3.7 Max' },
+  { value: 'opencode-go/qwen3.7-plus',      label: 'Qwen 3.7 Plus' },
+  { value: 'opencode-go/qwen3.6-plus',      label: 'Qwen 3.6 Plus' },
+  { value: 'opencode-go/minimax-m3',        label: 'MiniMax M3' },
+  { value: 'opencode-go/minimax-m2.7',      label: 'MiniMax M2.7' },
+  { value: 'opencode-go/minimax-m2.5',      label: 'MiniMax M2.5' },
+]
+
+// ── API Keys ────────────────────────────────────────────────────────────────
+const keys = ref({
+  google_places_api_key: '',
+  google_maps_api_key: '',
+  opencode_api_key: '',
+  opencode_model: 'opencode-go/deepseek-v4-flash',
+  firecrawl_url: '',
+  firecrawl_api_key: '',
+})
+const savingKeys = ref(false)
+
+// ── Categories ──────────────────────────────────────────────────────────────
 let _key = 0
 const categories    = ref([])
 const searchText    = ref('')
@@ -148,9 +230,25 @@ const allVisibleSelected   = computed(() => filtered.value.length > 0 && filtere
 const someVisibleSelected  = computed(() => !allVisibleSelected.value && filtered.value.some(c => selected.value.has(c._key)))
 
 onMounted(async () => {
-  const rows = await call('prospecting.api.get_all_categories')
+  const [apiSettings, rows] = await Promise.all([
+    call('prospecting.api.get_api_settings'),
+    call('prospecting.api.get_all_categories'),
+  ])
+  if (apiSettings) Object.assign(keys.value, apiSettings)
   categories.value = (rows || []).map(r => ({ ...r, _key: _key++ }))
 })
+
+async function saveKeys() {
+  savingKeys.value = true
+  try {
+    await call('prospecting.api.save_api_settings', { ...keys.value })
+    toast.success('Settings saved')
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    savingKeys.value = false
+  }
+}
 
 function toggleRow(key) {
   const s = new Set(selected.value)

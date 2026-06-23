@@ -36,7 +36,10 @@
   "territory",
   "section_notes",
   "notes",
-  "crm_lead"
+  "crm_lead",
+  "section_owner",
+  "owner_name",
+  "owner_name_context"
  ],
  "fields": [
   {
@@ -218,10 +221,28 @@
    "label": "CRM Lead",
    "read_only": 1,
    "hidden": 1
+  },
+  {
+   "fieldname": "section_owner",
+   "fieldtype": "Section Break",
+   "label": "Owner Intelligence"
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "label": "Owner Name (AI Guess)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "owner_name_context",
+   "fieldtype": "Small Text",
+   "label": "Owner Name Evidence (JSON)",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "links": [],
- "modified": "2026-06-21 12:00:00.000000",
+ "modified": "2026-06-23 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Prospecting",
  "name": "Prospect",

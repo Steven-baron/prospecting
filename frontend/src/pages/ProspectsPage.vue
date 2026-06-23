@@ -52,6 +52,12 @@
                     :loading="removing"
                     @click="doRemoveFromList([...selections], unselectAll)" />
                   <Button
+                    label="Find Owner Names"
+                    variant="outline"
+                    size="sm"
+                    :loading="findingOwners"
+                    @click="doFindOwnerNames([...selections], unselectAll)" />
+                  <Button
                     label="Push to CRM"
                     variant="solid"
                     size="sm"
@@ -177,8 +183,9 @@ const hasMore      = ref(false)
 const start        = ref(0)
 const openDoc      = ref(null)
 const selectedRows = ref(new Set())
-const removing     = ref(false)
-const pushing      = ref(false)
+const removing      = ref(false)
+const pushing       = ref(false)
+const findingOwners = ref(false)
 
 // Map state
 const showMap = ref(false)
@@ -203,7 +210,23 @@ function rowMenuOptions(row) {
 
 // ── Map helpers ──────────────────────────────────────────────────────────────
 
+function loadMapsScript(key) {
+  if (window.google?.maps) return Promise.resolve()
+  return new Promise((res, rej) => {
+    const s = document.createElement('script')
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+    s.onload = res; s.onerror = rej
+    document.head.appendChild(s)
+  })
+}
+
 async function ensureMapReady() {
+  if (!window.google?.maps) {
+    const kr  = await call('prospecting.api.get_maps_api_key')
+    const key = (kr || '').trim()
+    if (!key) { toast.error('Google Maps API key not configured.'); return }
+    await loadMapsScript(key)
+  }
   await nextTick()  // let v-show apply so the div has real dimensions
   if (!map) {
     map = new google.maps.Map(mapEl.value, {
@@ -258,8 +281,6 @@ async function toggleMap() {
   if (showMap.value) {
     await ensureMapReady()
     dropMarkers()
-  } else {
-    activeRow.value = null
   }
 }
 
@@ -298,6 +319,7 @@ async function loadPage(reset) {
         'name', 'prospect_name', 'category', 'address', 'mobile_no',
         'email_id', 'website', 'rating', 'review_count', 'status',
         'prospect_list', 'lat', 'lng', 'google_maps_uri', 'notes', 'crm_lead',
+        'owner_name',
       ],
       filters,
       limit:       50,
@@ -329,7 +351,6 @@ function onStatusUpdated({ name, status }) {
   const p = prospects.value.find(p => p.name === name)
   if (p) p.status = status
   if (openDoc.value?.name === name) openDoc.value.status = status
-  if (activeRow.value?.name === name) activeRow.value.status = status
 }
 
 async function deleteProspect(name) {
@@ -375,6 +396,42 @@ async function doPushToCRM(names, unselectAll) {
     toast.error(e.message)
   } finally {
     pushing.value = false
+  }
+}
+
+async function doFindOwnerNames(names, unselectAll) {
+  if (!names.length) return
+  findingOwners.value = true
+  try {
+    const r = await call('prospecting.api.find_owner_names', { prospect_names: names })
+    let found = 0
+    for (const [pname, data] of Object.entries(r.results || {})) {
+      if (data.owner_name) {
+        found++
+        const p = prospects.value.find(p => p.name === pname)
+        if (p) p.owner_name = data.owner_name
+        if (openDoc.value?.name === pname) {
+          openDoc.value.owner_name = data.owner_name
+          openDoc.value.owner_name_context = JSON.stringify(data.examples || [])
+        }
+      }
+    }
+    const skipped = names.length - found - (r.errors?.length || 0)
+    const parts = []
+    if (found)            parts.push(`${found} owner name(s) found`)
+    if (skipped)          parts.push(`${skipped} no name found`)
+    if (r.errors?.length) parts.push(`${r.errors.length} error(s)`)
+    if (r.errors?.length) {
+      const firstErr = r.errors[0]?.error || 'Unknown error'
+      toast.error(`Error (${r.errors.length} prospect(s)): ${firstErr}`)
+    } else {
+      toast.success(parts.join(' · ') || 'Done')
+    }
+    unselectAll?.()
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    findingOwners.value = false
   }
 }
 

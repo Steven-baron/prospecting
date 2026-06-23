@@ -52,6 +52,19 @@
             @click="showSaveDialog = true" />
         </div>
 
+        <!-- Select-all bar (shown once results exist) -->
+        <div v-if="results.length"
+          class="flex items-center gap-2 px-4 py-1.5 border-b bg-surface-gray-1 flex-shrink-0">
+          <input type="checkbox"
+            :checked="selected.size > 0 && selected.size === results.length"
+            :indeterminate.prop="selected.size > 0 && selected.size < results.length"
+            class="form-checkbox cursor-pointer"
+            @click.stop="toggleSelectAll" />
+          <span class="text-xs text-ink-gray-5 select-none">
+            {{ selected.size === results.length ? 'Deselect all' : 'Select all' }}
+          </span>
+        </div>
+
         <div ref="resultsListEl" class="flex-1 overflow-y-auto">
           <div v-if="!results.length && !searching"
             class="flex flex-col items-center justify-center h-full gap-3 text-ink-gray-5 p-8">
@@ -68,11 +81,11 @@
               'ring-2 ring-inset ring-ink-blue-2': highlightedId === r.placeId,
             }"
             @click="onRowClick(r)">
-            <div class="flex-shrink-0 flex items-start pt-0.5" @click.stop="toggleSelect(r.placeId)">
+            <div class="flex-shrink-0 flex items-start pt-0.5" @click.stop>
               <input type="checkbox"
                 :checked="selected.has(r.placeId)"
-                @click.prevent
-                class="form-checkbox cursor-pointer" />
+                class="form-checkbox cursor-pointer"
+                @click.stop="toggleSelect(r.placeId)" />
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
@@ -372,6 +385,14 @@ function toggleSelect(id) {
   const s = new Set(selected.value)
   s.has(id) ? s.delete(id) : s.add(id)
   selected.value = s
+}
+
+function toggleSelectAll() {
+  if (selected.value.size === results.value.length) {
+    selected.value = new Set()
+  } else {
+    selected.value = new Set(results.value.map(r => r.placeId))
+  }
 }
 
 async function save() {
