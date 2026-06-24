@@ -414,16 +414,34 @@ async function openDetail(name) {
   openDoc.value = r
 }
 
+// Does a prospect with this status belong in the current filtered view?
+function matchesStatusFilter(status) {
+  if (fStatus.value === '')    return status !== 'Dismissed'  // Active
+  if (fStatus.value === 'All') return true
+  return status === fStatus.value
+}
+
+// Drop a row from the view if its new status no longer matches the active filter.
+function reconcileRow(name, status) {
+  if (matchesStatusFilter(status)) return
+  prospects.value = prospects.value.filter(p => p.name !== name)
+  if (openDoc.value?.name === name) openDoc.value = null
+  if (map) dropMarkers()
+  reloadLists()
+}
+
 async function updateStatus(name, status) {
   await call('frappe.client.set_value', { doctype: 'Prospect', name, fieldname: 'status', value: status })
   const p = prospects.value.find(p => p.name === name)
   if (p) p.status = status
+  reconcileRow(name, status)
 }
 
 function onStatusUpdated({ name, status }) {
   const p = prospects.value.find(p => p.name === name)
   if (p) p.status = status
   if (openDoc.value?.name === name) openDoc.value.status = status
+  reconcileRow(name, status)
 }
 
 async function deleteProspect(name) {
