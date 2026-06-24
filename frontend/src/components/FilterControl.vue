@@ -16,39 +16,42 @@
       </div>
     </template>
     <template #body-main>
-      <div class="w-[440px] p-2">
+      <div class="min-w-72 p-2 sm:min-w-[400px]">
         <div v-if="modelValue.length" class="flex flex-col gap-2">
-          <div v-for="(f, i) in modelValue" :key="i" class="flex items-center gap-1.5">
-            <span class="w-9 shrink-0 text-sm text-ink-gray-5">{{ i === 0 ? 'Where' : 'And' }}</span>
-            <Autocomplete
-              class="w-32 shrink-0"
-              :options="fieldOptions"
-              :model-value="f.field"
-              placeholder="Field"
-              @update:model-value="v => setField(i, v)" />
-            <FormControl
-              class="w-24 shrink-0"
-              type="select"
-              :options="operatorsFor(f.field)"
-              :model-value="f.operator"
-              @update:model-value="v => update(i, 'operator', v)" />
-            <FormControl
-              v-if="!isUnary(f.operator) && valueIsSelect(f)"
-              class="min-w-0 flex-1"
-              type="select"
-              :options="valueOptions(f.field)"
-              :model-value="f.value"
-              @update:model-value="v => update(i, 'value', v)" />
-            <FormControl
-              v-else-if="!isUnary(f.operator)"
-              class="min-w-0 flex-1"
-              type="text"
-              :model-value="f.value"
-              placeholder="Value"
-              :debounce="300"
-              @update:model-value="v => update(i, 'value', v)" />
-            <div v-else class="flex-1" />
-            <Button variant="ghost" icon="x" class="shrink-0" @click="remove(i)" />
+          <div v-for="(f, i) in modelValue" :key="i" class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-12 pl-2 text-end text-sm text-ink-gray-5">{{ i === 0 ? 'Where' : 'And' }}</div>
+              <div class="!min-w-[140px]">
+                <Autocomplete
+                  :options="fieldOptions"
+                  :model-value="f.field"
+                  placeholder="Field"
+                  @update:model-value="v => setField(i, v)" />
+              </div>
+              <div>
+                <FormControl
+                  type="select"
+                  :options="operatorsFor(f.field)"
+                  :model-value="f.operator"
+                  @update:model-value="v => update(i, 'operator', v)" />
+              </div>
+              <div class="!min-w-[140px]">
+                <FormControl
+                  v-if="!isUnary(f.operator) && valueIsSelect(f)"
+                  type="select"
+                  :options="valueOptions(f.field)"
+                  :model-value="f.value"
+                  @update:model-value="v => update(i, 'value', v)" />
+                <FormControl
+                  v-else-if="!isUnary(f.operator)"
+                  type="text"
+                  :model-value="f.value"
+                  placeholder="Value"
+                  :debounce="300"
+                  @update:model-value="v => update(i, 'value', v)" />
+              </div>
+            </div>
+            <Button variant="ghost" icon="x" @click="remove(i)" />
           </div>
         </div>
         <div v-else class="px-1 py-2 text-sm text-ink-gray-5">No filters applied</div>

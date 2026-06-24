@@ -133,7 +133,7 @@
       <ProspectDetail
         :doc="openDoc"
         @close="openDoc = null"
-        @delete="deleteProspect"
+        @delete="name => doDeleteBulk([name], null)"
         @status-updated="onStatusUpdated"
         @field-updated="onFieldUpdated" />
 
@@ -260,6 +260,7 @@ const pushing       = ref(false)
 const findingOwners = ref(false)
 const dismissing    = ref(false)
 const restoring     = ref(false)
+const deleting      = ref(false)
 
 // Map state
 const showMap = ref(false)
@@ -286,6 +287,7 @@ function bulkActions(names, unselectAll) {
   }
   opts.push({ label: 'Find Owner Names', icon: 'user', onClick: () => doFindOwnerNames(names, unselectAll) })
   opts.push({ label: 'Push to CRM', icon: 'external-link', onClick: () => doPushToCRM(names, unselectAll) })
+  opts.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk(names, unselectAll) })
   return opts
 }
 
@@ -301,7 +303,7 @@ function rowMenuOptions(row) {
   if (props.listName) {
     opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList([row.name], null) })
   }
-  opts.push({ label: 'Delete', icon: 'trash-2', theme: 'red', onClick: () => deleteProspect(row.name) })
+  opts.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk([row.name], null) })
   return opts
 }
 
@@ -497,30 +499,41 @@ function onFieldUpdated({ name, key, value }) {
   }
 }
 
-async function deleteProspect(name) {
-  await call('frappe.client.delete', { doctype: 'Prospect', name })
-  prospects.value = prospects.value.filter(p => p.name !== name)
-  if (openDoc.value?.name === name) openDoc.value = null
-  if (map) dropMarkers()
-  reloadLists()
-  toast.success('Prospect deleted')
-}
-
 async function doRemoveFromList(names, unselectAll) {
   if (!names.length) return
   removing.value = true
   try {
     const r = await call('prospecting.api.remove_from_list', { prospect_names: names })
-    prospects.value = prospects.value.filter(p => !names.includes(p.name))
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
-    if (map) dropMarkers()
     unselectAll?.()
-    reloadLists()
     toast.success(`Removed ${r.removed} prospect(s) from list`)
+    await reload()
+    reloadLists()
   } catch (e) {
     toast.error(e.message)
   } finally {
     removing.value = false
+  }
+}
+
+async function doDeleteBulk(names, unselectAll) {
+  if (!names.length) return
+  const msg = `Permanently delete ${names.length} prospect(s)?\n\n` +
+    `This removes the record entirely — unlike Dismiss, the same business CAN ` +
+    `reappear on a future search.`
+  if (!confirm(msg)) return
+  deleting.value = true
+  try {
+    const r = await call('prospecting.api.delete_prospects', { prospect_names: names })
+    if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
+    unselectAll?.()
+    toast.success(`Deleted ${r.deleted} prospect(s)`)
+    await reload()
+    reloadLists()
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    deleting.value = false
   }
 }
 

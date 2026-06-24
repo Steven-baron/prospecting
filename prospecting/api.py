@@ -609,6 +609,19 @@ def restore_prospects(prospect_names):
 
 
 @frappe.whitelist()
+def delete_prospects(prospect_names):
+	"""Permanently delete prospects. Unlike Dismiss/Remove, this drops the record
+	entirely — so the same business CAN be re-imported on a future search
+	(import dedups by place_id, which only blocks places that still exist)."""
+	if isinstance(prospect_names, str):
+		prospect_names = json.loads(prospect_names)
+	for name in prospect_names:
+		frappe.delete_doc('Prospect', name, ignore_permissions=True, force=True)
+	frappe.db.commit()
+	return {'deleted': len(prospect_names)}
+
+
+@frappe.whitelist()
 def push_to_crm(prospect_names):
 	"""
 	Push prospects to CRM.
