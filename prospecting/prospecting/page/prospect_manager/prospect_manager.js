@@ -7,7 +7,7 @@ frappe.pages['prospect-manager'].on_page_load = function (wrapper) {
 	new ProspectManager(page);
 };
 
-const PM_STATUSES = ['New', 'Contacted', 'Qualified', 'Won', 'Lost'];
+const PM_STATUSES = ['New', 'Lead', 'Dismissed'];
 
 class ProspectManager {
 	constructor(page) {

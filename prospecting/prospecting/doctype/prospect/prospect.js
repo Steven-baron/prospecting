@@ -32,7 +32,7 @@ frappe.ui.form.on('Prospect', {
 	},
 
 	status(frm) {
-		if (['Won', 'Lost'].includes(frm.doc.status)) {
+		if (frm.doc.status === 'Dismissed') {
 			frm.set_value('next_follow_up', null);
 		}
 	},

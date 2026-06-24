@@ -180,7 +180,7 @@ def get_lists_with_counts():
 	rows = frappe.db.sql("""
 		SELECT prospect_list, COUNT(*) AS cnt
 		FROM `tabProspect`
-		WHERE docstatus < 2
+		WHERE docstatus < 2 AND status != 'Dismissed'
 		GROUP BY prospect_list
 	""", as_dict=True)
 	count_map = {r.prospect_list: r.cnt for r in rows}
@@ -585,6 +585,30 @@ def remove_from_list(prospect_names):
 
 
 @frappe.whitelist()
+def dismiss_prospects(prospect_names):
+	"""Mark prospects as Dismissed: hidden from the active list, but the record is
+	kept (and keeps its list link) so re-searching the same area won't re-import them
+	(import dedups by place_id across all statuses)."""
+	if isinstance(prospect_names, str):
+		prospect_names = json.loads(prospect_names)
+	for name in prospect_names:
+		frappe.db.set_value('Prospect', name, 'status', 'Dismissed')
+	frappe.db.commit()
+	return {'dismissed': len(prospect_names)}
+
+
+@frappe.whitelist()
+def restore_prospects(prospect_names):
+	"""Restore dismissed prospects back to New so they reappear in the active list."""
+	if isinstance(prospect_names, str):
+		prospect_names = json.loads(prospect_names)
+	for name in prospect_names:
+		frappe.db.set_value('Prospect', name, 'status', 'New')
+	frappe.db.commit()
+	return {'restored': len(prospect_names)}
+
+
+@frappe.whitelist()
 def push_to_crm(prospect_names):
 	"""
 	Push prospects to CRM.
@@ -643,9 +667,9 @@ def push_to_crm(prospect_names):
 			# ── 4. Sync notes → FCRM Note on the Lead ────────────────────────
 			_sync_note_to_crm(p, lead.name)
 
-			# ── 5. Store lead reference + mark Qualified ──────────────────────
+			# ── 5. Store lead reference + mark as Lead ────────────────────────
 			frappe.db.set_value('Prospect', pname, {
-				'status':   'Qualified',
+				'status':   'Lead',
 				'crm_lead': lead.name,
 			})
 			lead_names[pname] = lead.name

@@ -11,11 +11,8 @@ website_route_rules = [
 
 after_install = "prospecting.install.after_install"
 
-doc_events = {
-    "CRM Deal": {
-        "after_insert": "prospecting.hooks_handlers.on_crm_deal_created",
-    },
-}
+# Prospecting status (New / Lead / Dismissed) is intentionally decoupled from the
+# CRM deal pipeline — CRM stages stay in CRM and do not flow back to the prospect.
 
 # Apps
 # ------------------

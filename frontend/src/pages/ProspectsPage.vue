@@ -8,6 +8,7 @@
         <Badge v-if="prospects.length" :label="String(prospects.length)" theme="gray" size="sm" />
       </div>
       <div class="flex gap-2">
+        <Button :label="showDismissed ? 'Hide Dismissed' : 'Show Dismissed'" variant="subtle" @click="toggleDismissed" />
         <Button :label="showMap ? 'Hide Map' : 'Show Map'" variant="subtle" @click="toggleMap" />
         <Button v-if="listName" label="Delete list" variant="subtle"
           class="text-ink-red-3" @click="confirmDeleteList" />
@@ -44,6 +45,19 @@
             <ListSelectBanner v-if="selectable">
               <template #actions="{ selections, unselectAll }">
                 <div class="flex items-center gap-2">
+                  <Button
+                    v-if="showDismissed"
+                    label="Restore"
+                    variant="subtle"
+                    size="sm"
+                    :loading="restoring"
+                    @click="doRestore([...selections], unselectAll)" />
+                  <Button
+                    label="Dismiss"
+                    variant="subtle"
+                    size="sm"
+                    :loading="dismissing"
+                    @click="doDismiss([...selections], unselectAll)" />
                   <Button
                     v-if="listName"
                     label="Remove from list"
@@ -155,7 +169,7 @@ const router      = useRouter()
 const lists       = inject('lists', ref([]))
 const reloadLists = inject('reloadLists', () => {})
 
-const STATUSES = ['New', 'Contacted', 'Qualified', 'Won', 'Lost']
+const STATUSES = ['New', 'Lead', 'Dismissed']
 
 const ALL_COLUMNS = [
   { label: 'Business Name', key: 'prospect_name',  width: '220px' },
@@ -186,6 +200,9 @@ const selectedRows = ref(new Set())
 const removing      = ref(false)
 const pushing       = ref(false)
 const findingOwners = ref(false)
+const dismissing    = ref(false)
+const restoring     = ref(false)
+const showDismissed = ref(false)
 
 // Map state
 const showMap = ref(false)
@@ -201,6 +218,11 @@ function rowMenuOptions(row) {
   const opts = [
     { label: 'Push to CRM', icon: 'external-link', onClick: () => doPushToCRM([row.name], null) },
   ]
+  if (row.status === 'Dismissed') {
+    opts.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => doRestore([row.name], null) })
+  } else {
+    opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss([row.name], null) })
+  }
   if (props.listName) {
     opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList([row.name], null) })
   }
@@ -313,6 +335,11 @@ async function loadPage(reset) {
   loading.value = true
   try {
     const filters = props.listName ? [['prospect_list', '=', props.listName]] : []
+    if (showDismissed.value) {
+      filters.push(['status', '=', 'Dismissed'])
+    } else {
+      filters.push(['status', '!=', 'Dismissed'])
+    }
     const rows = await call('frappe.client.get_list', {
       doctype: 'Prospect',
       fields: [
@@ -377,6 +404,54 @@ async function doRemoveFromList(names, unselectAll) {
     toast.error(e.message)
   } finally {
     removing.value = false
+  }
+}
+
+async function toggleDismissed() {
+  showDismissed.value = !showDismissed.value
+  await reload()
+}
+
+async function doDismiss(names, unselectAll) {
+  if (!names.length) return
+  dismissing.value = true
+  try {
+    const r = await call('prospecting.api.dismiss_prospects', { prospect_names: names })
+    // In the active view dismissed rows drop out; in the dismissed view they stay.
+    if (showDismissed.value) {
+      names.forEach(n => { const p = prospects.value.find(p => p.name === n); if (p) p.status = 'Dismissed' })
+    } else {
+      prospects.value = prospects.value.filter(p => !names.includes(p.name))
+      if (map) dropMarkers()
+    }
+    if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
+    unselectAll?.()
+    toast.success(`Dismissed ${r.dismissed} prospect(s)`)
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    dismissing.value = false
+  }
+}
+
+async function doRestore(names, unselectAll) {
+  if (!names.length) return
+  restoring.value = true
+  try {
+    const r = await call('prospecting.api.restore_prospects', { prospect_names: names })
+    // In the dismissed view restored rows drop out; in the active view they reappear via status.
+    if (showDismissed.value) {
+      prospects.value = prospects.value.filter(p => !names.includes(p.name))
+    } else {
+      names.forEach(n => { const p = prospects.value.find(p => p.name === n); if (p) p.status = 'New' })
+    }
+    if (map) dropMarkers()
+    unselectAll?.()
+    toast.success(`Restored ${r.restored} prospect(s)`)
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    restoring.value = false
   }
 }
 

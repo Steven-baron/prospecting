@@ -131,7 +131,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'delete', 'status-updated'])
 
-const STATUSES     = ['New', 'Contacted', 'Qualified', 'Won', 'Lost']
+const STATUSES     = ['New', 'Lead', 'Dismissed']
 const findingEmail = ref(false)
 const localNotes   = ref('')
 const notesSaved   = ref(false)
@@ -199,9 +199,9 @@ async function pushOneToCRM() {
     const r = await call('prospecting.api.push_to_crm', { prospect_names: [props.doc.name] })
     if (r.created) {
       toast.success('Lead created in CRM')
-      props.doc.status = 'Qualified'
+      props.doc.status = 'Lead'
       props.doc.crm_lead = r.lead_names?.[props.doc.name] || props.doc.crm_lead
-      emit('status-updated', { name: props.doc.name, status: 'Qualified' })
+      emit('status-updated', { name: props.doc.name, status: 'Lead' })
     } else if (r.skipped) {
       toast.warning('Lead already exists in CRM')
     } else if (r.errors?.length) {
