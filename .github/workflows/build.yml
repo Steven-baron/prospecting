@@ -15,11 +15,21 @@ on:
 jobs:
   trigger:
     runs-on: ubuntu-latest
+    env:
+      PLATFORM_TOKEN: ${{ secrets.PLATFORM_TOKEN }}
     steps:
+      # Auto-build isn't wired yet: until PLATFORM_TOKEN exists this step is
+      # skipped (the job stays green instead of failing). Add the secret to
+      # activate auto-dispatch — no other change needed.
       - name: Dispatch to frappe-platform
+        if: env.PLATFORM_TOKEN != ''
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.PLATFORM_TOKEN }}
           repository: Steven-baron/frappe-platform
           event-type: app-updated
           client-payload: '{"app": "prospecting", "sha": "${{ github.sha }}"}'
+
+      - name: Note when skipped
+        if: env.PLATFORM_TOKEN == ''
+        run: echo "PLATFORM_TOKEN not set — skipping auto-build. Build the image manually (see DEPLOY.md)."
