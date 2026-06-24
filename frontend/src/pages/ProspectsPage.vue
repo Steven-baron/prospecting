@@ -574,6 +574,10 @@ async function doRestore(names, unselectAll) {
 async function doPushToCRM(names, unselectAll) {
   if (!names.length) return
   pushing.value = true
+  const tid = toast.create({
+    message: `Pushing ${names.length} prospect(s) to CRM…`,
+    type: 'info', duration: 600,
+  })
   try {
     const r = await call('prospecting.api.push_to_crm', { prospect_names: names })
     const parts = []
@@ -586,6 +590,7 @@ async function doPushToCRM(names, unselectAll) {
   } catch (e) {
     toast.error(e.message)
   } finally {
+    toast.remove(tid)
     pushing.value = false
   }
 }
@@ -593,6 +598,10 @@ async function doPushToCRM(names, unselectAll) {
 async function doFindOwnerNames(names, unselectAll) {
   if (!names.length) return
   findingOwners.value = true
+  const tid = toast.create({
+    message: `Finding owner names for ${names.length} prospect(s)…`,
+    type: 'info', duration: 600,
+  })
   try {
     const r = await call('prospecting.api.find_owner_names', { prospect_names: names })
     let found = 0
@@ -622,6 +631,7 @@ async function doFindOwnerNames(names, unselectAll) {
   } catch (e) {
     toast.error(e.message)
   } finally {
+    toast.remove(tid)
     findingOwners.value = false
   }
 }
