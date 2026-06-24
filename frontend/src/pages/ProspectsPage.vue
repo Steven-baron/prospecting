@@ -139,7 +139,7 @@
         @prev="goPrevDetail"
         @next="goNextDetail"
         @go-to-list="goToList"
-        @delete="name => doDeleteBulk([name], null)"
+        @delete="name => { openDoc = null; doDeleteBulk([name], null) }"
         @status-updated="onStatusUpdated"
         @field-updated="onFieldUpdated" />
 
