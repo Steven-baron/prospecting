@@ -6,7 +6,9 @@
 
       <main class="flex flex-1 flex-col overflow-hidden">
         <router-view v-slot="{ Component }">
-          <component :is="Component" />
+          <keep-alive include="SearchPage">
+            <component :is="Component" />
+          </keep-alive>
         </router-view>
       </main>
 

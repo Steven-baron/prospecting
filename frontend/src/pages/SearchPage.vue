@@ -163,6 +163,12 @@
   </div>
 </template>
 
+<script>
+// Named so <keep-alive include="SearchPage"> can cache it (preserves search
+// state when navigating away to a list and back).
+export default { name: 'SearchPage' }
+</script>
+
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

@@ -41,6 +41,7 @@
         class="relative flex flex-col overflow-hidden">
 
         <ListView v-if="prospects.length || loading"
+          ref="listViewRef"
           :columns="columns"
           :rows="prospects"
           row-key="name"
@@ -129,10 +130,15 @@
         </div>
       </div>
 
-      <!-- Full detail slide-over -->
+      <!-- Detail modal (with prev/next navigation between rows) -->
       <ProspectDetail
         :doc="openDoc"
+        :has-prev="hasPrevDetail"
+        :has-next="hasNextDetail"
         @close="openDoc = null"
+        @prev="goPrevDetail"
+        @next="goNextDetail"
+        @go-to-list="goToList"
         @delete="name => doDeleteBulk([name], null)"
         @status-updated="onStatusUpdated"
         @field-updated="onFieldUpdated" />
@@ -505,10 +511,31 @@ async function loadPage(reset) {
   }
 }
 
+const listViewRef = ref(null)
+
+// Set the ListView's highlighted (active) row. activeRow isn't exposed, but the
+// ListView provides it via provide('list', ...) — reach it through the instance.
+function setActiveRow(name) {
+  const provided = listViewRef.value?.$?.provides?.list
+  if (provided?.value?.activeRow) provided.value.activeRow.value = name
+}
+
 async function openDetail(name) {
   const r = await call('frappe.client.get', { doctype: 'Prospect', name })
   openDoc.value = r
+  // Keep the list highlight on whatever the modal is showing (follows prev/next,
+  // and persists after close so the last-viewed row stays selected).
+  setActiveRow(name)
 }
+
+// Prev/next navigation through the loaded rows without closing the modal
+const openIndex = computed(() =>
+  openDoc.value ? prospects.value.findIndex(p => p.name === openDoc.value.name) : -1)
+const hasPrevDetail = computed(() => openIndex.value > 0)
+const hasNextDetail = computed(() => openIndex.value >= 0 && openIndex.value < prospects.value.length - 1)
+async function goPrevDetail() { if (hasPrevDetail.value) await openDetail(prospects.value[openIndex.value - 1].name) }
+async function goNextDetail() { if (hasNextDetail.value) await openDetail(prospects.value[openIndex.value + 1].name) }
+function goToList(listName) { if (listName) { openDoc.value = null; router.push(`/list/${listName}`) } }
 
 // Does a prospect with this status belong in the current filtered view?
 function matchesStatusFilter(status) {
