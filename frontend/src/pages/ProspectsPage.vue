@@ -44,52 +44,21 @@
             <ListEmptyState v-else />
             <ListSelectBanner v-if="selectable">
               <template #actions="{ selections, unselectAll }">
-                <div class="flex items-center gap-2">
-                  <Button
-                    v-if="showDismissed"
-                    label="Restore"
-                    variant="subtle"
-                    size="sm"
-                    :loading="restoring"
-                    @click="doRestore([...selections], unselectAll)" />
-                  <Button
-                    label="Dismiss"
-                    variant="subtle"
-                    size="sm"
-                    :loading="dismissing"
-                    @click="doDismiss([...selections], unselectAll)" />
-                  <Button
-                    v-if="listName"
-                    label="Remove from list"
-                    variant="subtle"
-                    size="sm"
-                    :loading="removing"
-                    @click="doRemoveFromList([...selections], unselectAll)" />
-                  <Button
-                    label="Find Owner Names"
-                    variant="outline"
-                    size="sm"
-                    :loading="findingOwners"
-                    @click="doFindOwnerNames([...selections], unselectAll)" />
-                  <Button
-                    label="Push to CRM"
-                    variant="solid"
-                    size="sm"
-                    :loading="pushing"
-                    @click="doPushToCRM([...selections], unselectAll)" />
-                </div>
+                <Dropdown :options="bulkActions([...selections], unselectAll)">
+                  <Button variant="ghost" icon="more-horizontal" />
+                </Dropdown>
               </template>
             </ListSelectBanner>
           </template>
 
           <template #cell="{ column, row, item }">
             <div v-if="column.key === 'status'" @click.stop>
-              <Select
-                :options="STATUSES"
-                :model-value="item"
-                size="sm"
-                variant="subtle"
-                @update:model-value="v => updateStatus(row.name, v)" />
+              <Dropdown :options="STATUSES.map(s => ({ label: s, onClick: () => updateStatus(row.name, s) }))">
+                <button class="flex items-center gap-1.5 rounded px-1.5 py-1 text-sm text-ink-gray-7 hover:bg-surface-gray-2">
+                  <span :class="['size-2 rounded-full', statusColor(item)]" />
+                  {{ item || 'New' }}
+                </button>
+              </Dropdown>
             </div>
             <span v-else-if="column.key === 'rating'" class="text-amber-500 text-sm">
               {{ item != null ? `★ ${Number(item).toFixed(1)}` : '—' }}
@@ -156,7 +125,7 @@ import { ref, computed, watch, inject, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ListView, ListHeader, ListRows, ListEmptyState, ListSelectBanner,
-  Button, Badge, Select, Dropdown, toast,
+  Button, Badge, Dropdown, toast,
 } from 'frappe-ui'
 import ProspectDetail from '../components/ProspectDetail.vue'
 import { call } from '../composables/api.js'
@@ -213,6 +182,24 @@ const pageTitle = computed(() => {
   if (!props.listName) return 'All Prospects'
   return lists.value.find(l => l.name === props.listName)?.list_name || props.listName
 })
+
+const STATUS_COLORS = { New: 'bg-gray-400', Lead: 'bg-green-500', Dismissed: 'bg-red-400' }
+function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
+
+function bulkActions(names, unselectAll) {
+  const opts = []
+  if (showDismissed.value) {
+    opts.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => doRestore(names, unselectAll) })
+  } else {
+    opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss(names, unselectAll) })
+  }
+  if (props.listName) {
+    opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList(names, unselectAll) })
+  }
+  opts.push({ label: 'Find Owner Names', icon: 'user', onClick: () => doFindOwnerNames(names, unselectAll) })
+  opts.push({ label: 'Push to CRM', icon: 'external-link', onClick: () => doPushToCRM(names, unselectAll) })
+  return opts
+}
 
 function rowMenuOptions(row) {
   const opts = [
