@@ -199,12 +199,12 @@ const COLUMN_CATALOG = [
   { label: 'Rating',        key: 'rating',           width: '80px'  },
   { label: 'Reviews',       key: 'review_count',     width: '90px'  },
   { label: 'Source',        key: 'source',           width: '120px' },
-  { label: 'Territory',     key: 'territory',        width: '120px' },
+  { label: 'Town',          key: 'territory',        width: '120px' },
   { label: 'Follow-up',     key: 'next_follow_up',   width: '110px' },
   { label: 'Status',        key: 'status',           width: '130px' },
 ]
 const DEFAULT_COLUMN_KEYS = [
-  'prospect_name', 'category', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status',
+  'prospect_name', 'category', 'territory', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status',
 ]
 const ACTIONS_COL = { label: '', key: '_actions', width: '60px' }
 
@@ -246,7 +246,7 @@ const FILTER_FIELDS = [
   { label: 'Reviews',       fieldname: 'review_count',    fieldtype: 'Int'    },
   { label: 'Status',        fieldname: 'status',          fieldtype: 'Select', options: ['New', 'Lead', 'Dismissed'] },
   { label: 'Source',        fieldname: 'source',          fieldtype: 'Data'   },
-  { label: 'Territory',     fieldname: 'territory',       fieldtype: 'Data'   },
+  { label: 'Town',          fieldname: 'territory',       fieldtype: 'Data'   },
   { label: 'Follow-up',     fieldname: 'next_follow_up',  fieldtype: 'Date'   },
 ]
 const fName      = ref('')

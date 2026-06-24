@@ -51,7 +51,7 @@
             </div>
           </div>
           <FieldRow label="Source"><EditText field="source" /></FieldRow>
-          <FieldRow label="Territory"><EditText field="territory" /></FieldRow>
+          <FieldRow label="Town"><EditText field="territory" /></FieldRow>
           <FieldRow label="Follow-up"><EditText field="next_follow_up" type="date" /></FieldRow>
           <FieldRow label="Rating">
             <span v-if="doc.rating != null" class="px-2 text-sm">

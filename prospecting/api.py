@@ -8,6 +8,7 @@ _FIELD_MASK = ','.join([
 	'places.id',
 	'places.displayName',
 	'places.formattedAddress',
+	'places.addressComponents',
 	'places.location',
 	'places.internationalPhoneNumber',
 	'places.nationalPhoneNumber',
@@ -200,6 +201,38 @@ def delete_list(list_name):
 	return {'deleted': len(prospects)}
 
 
+# Google Places addressComponent types that represent the "town", best first.
+_TOWN_TYPES = ('locality', 'postal_town', 'administrative_area_level_3',
+               'sublocality', 'administrative_area_level_2')
+
+
+def _town_from_components(components):
+	"""Extract the town/city from Google Places addressComponents."""
+	if not components:
+		return ''
+	for t in _TOWN_TYPES:
+		for c in components:
+			if t in (c.get('types') or []):
+				return c.get('longText') or c.get('shortText') or ''
+	return ''
+
+
+def _town_from_address(address):
+	"""Best-effort town from a formatted address string (for backfilling old records).
+	e.g. '384 Yonge St Unit 94, Toronto, ON M5B 1S8, Canada' -> 'Toronto'."""
+	if not address:
+		return ''
+	parts = [p.strip() for p in address.split(',') if p.strip()]
+	if parts and parts[-1].lower() in ('canada', 'usa', 'us', 'united states'):
+		parts = parts[:-1]
+	if not parts:
+		return ''
+	# Last part is usually "PROVINCE/STATE POSTAL" (e.g. 'ON M5B 1S8') -> town is the one before
+	if len(parts) >= 2 and re.match(r'^[A-Z]{2}\b', parts[-1]):
+		return parts[-2]
+	return parts[-1] if len(parts) >= 2 else ''
+
+
 def _map_place(p):
 	loc  = p.get('location') or {}
 	ptd  = p.get('primaryTypeDisplayName') or {}
@@ -208,6 +241,7 @@ def _map_place(p):
 		'placeId':        p.get('id'),
 		'businessName':   (p.get('displayName') or {}).get('text') or '(unnamed)',
 		'address':        p.get('formattedAddress'),
+		'town':           _town_from_components(p.get('addressComponents')),
 		'phone':          p.get('internationalPhoneNumber') or p.get('nationalPhoneNumber'),
 		'website':        p.get('websiteUri'),
 		'category':       ptd.get('text') or p.get('primaryType') or (types[0] if types else None),
@@ -556,6 +590,7 @@ def import_prospects(prospects, list_name='', new_list_name='', enrich_email=0, 
 		doc.mobile_no       = _t(p.get('phone') or '')
 		doc.website         = _t(p.get('website') or '')
 		doc.address         = _t(p.get('address') or '')
+		doc.territory       = _t(p.get('town') or _town_from_address(p.get('address') or ''))
 		doc.lat             = p.get('lat')
 		doc.lng             = p.get('lng')
 		doc.rating          = p.get('rating')
