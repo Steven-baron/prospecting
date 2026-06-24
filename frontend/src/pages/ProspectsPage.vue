@@ -8,12 +8,24 @@
         <Badge v-if="prospects.length" :label="String(prospects.length)" theme="gray" size="sm" />
       </div>
       <div class="flex gap-2">
-        <Button :label="showDismissed ? 'Hide Dismissed' : 'Show Dismissed'" variant="subtle" @click="toggleDismissed" />
         <Button :label="showMap ? 'Hide Map' : 'Show Map'" variant="subtle" @click="toggleMap" />
         <Button v-if="listName" label="Delete list" variant="subtle"
           class="text-ink-red-3" @click="confirmDeleteList" />
         <Button label="Find Prospects" variant="solid" icon-left="search"
           @click="router.push('/search')" />
+      </div>
+    </div>
+
+    <!-- Toolbar: quick filters + sort + columns -->
+    <div class="flex items-center gap-2 border-b px-5 py-2 flex-shrink-0">
+      <TextInput v-model="fName" placeholder="Business name" class="w-44" />
+      <TextInput v-model="fCategory" placeholder="Category" class="w-36" />
+      <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="w-32" />
+      <div class="ml-auto flex items-center gap-2">
+        <Select v-model="sortBy" :options="SORT_OPTIONS" class="w-40" />
+        <Dropdown :options="columnsMenu" :close-on-click="false">
+          <Button variant="subtle" label="Columns" icon-left="columns" />
+        </Dropdown>
       </div>
     </div>
 
@@ -125,7 +137,7 @@ import { ref, computed, watch, inject, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ListView, ListHeader, ListRows, ListEmptyState, ListSelectBanner,
-  Button, Badge, Dropdown, toast,
+  Button, Badge, Dropdown, Select, TextInput, toast,
 } from 'frappe-ui'
 import ProspectDetail from '../components/ProspectDetail.vue'
 import { call } from '../composables/api.js'
@@ -157,7 +169,49 @@ const MAP_COLUMNS = [
   { label: '',              key: '_actions',       width: '60px'  },
 ]
 
-const columns = computed(() => showMap.value ? MAP_COLUMNS : ALL_COLUMNS)
+// Columns the user can show/hide (Business Name, Status, actions are always shown)
+const OPTIONAL_COLS = [
+  { label: 'Category', key: 'category' },
+  { label: 'Address',  key: '_address_short' },
+  { label: 'Phone',    key: 'mobile_no' },
+  { label: 'Rating',   key: 'rating' },
+]
+const visibleCols = ref({ category: true, _address_short: true, mobile_no: true, rating: true })
+
+const columns = computed(() => {
+  if (showMap.value) return MAP_COLUMNS
+  return ALL_COLUMNS.filter(c => !(c.key in visibleCols.value) || visibleCols.value[c.key])
+})
+
+const columnsMenu = computed(() =>
+  OPTIONAL_COLS.map(c => ({
+    label: c.label,
+    icon: visibleCols.value[c.key] ? 'check-square' : 'square',
+    onClick: () => { visibleCols.value[c.key] = !visibleCols.value[c.key] },
+  }))
+)
+
+// Quick-filter + sort state
+const STATUS_FILTER_OPTIONS = [
+  { label: 'Active',    value: ''          },  // New + Lead (hides Dismissed)
+  { label: 'New',       value: 'New'       },
+  { label: 'Lead',      value: 'Lead'      },
+  { label: 'Dismissed', value: 'Dismissed' },
+  { label: 'All',       value: 'All'       },
+]
+const SORT_OPTIONS = [
+  { label: 'Newest',          value: 'modified desc'      },
+  { label: 'Oldest',          value: 'modified asc'       },
+  { label: 'Name A–Z',        value: 'prospect_name asc'  },
+  { label: 'Name Z–A',        value: 'prospect_name desc' },
+  { label: 'Rating high–low', value: 'rating desc'        },
+  { label: 'Rating low–high', value: 'rating asc'         },
+]
+const fName     = ref('')
+const fCategory = ref('')
+const fStatus   = ref('')
+const sortBy    = ref('modified desc')
+const viewingDismissed = computed(() => fStatus.value === 'Dismissed')
 
 // List state
 const prospects    = ref([])
@@ -171,7 +225,6 @@ const pushing       = ref(false)
 const findingOwners = ref(false)
 const dismissing    = ref(false)
 const restoring     = ref(false)
-const showDismissed = ref(false)
 
 // Map state
 const showMap = ref(false)
@@ -188,7 +241,7 @@ function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
 
 function bulkActions(names, unselectAll) {
   const opts = []
-  if (showDismissed.value) {
+  if (viewingDismissed.value) {
     opts.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => doRestore(names, unselectAll) })
   } else {
     opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss(names, unselectAll) })
@@ -305,6 +358,13 @@ function handleRowClick(row) {
 // ── Data loading ─────────────────────────────────────────────────────────────
 
 watch(() => props.listName, () => reload())
+// status / sort apply immediately; text filters debounce
+watch([fStatus, sortBy], () => reload())
+let filterTimer
+watch([fName, fCategory], () => {
+  clearTimeout(filterTimer)
+  filterTimer = setTimeout(() => reload(), 300)
+})
 onMounted(reload)
 
 async function reload() {
@@ -322,11 +382,10 @@ async function loadPage(reset) {
   loading.value = true
   try {
     const filters = props.listName ? [['prospect_list', '=', props.listName]] : []
-    if (showDismissed.value) {
-      filters.push(['status', '=', 'Dismissed'])
-    } else {
-      filters.push(['status', '!=', 'Dismissed'])
-    }
+    if (fStatus.value === '')              filters.push(['status', '!=', 'Dismissed'])
+    else if (fStatus.value !== 'All')      filters.push(['status', '=', fStatus.value])
+    if (fName.value.trim())                filters.push(['prospect_name', 'like', `%${fName.value.trim()}%`])
+    if (fCategory.value.trim())            filters.push(['category', 'like', `%${fCategory.value.trim()}%`])
     const rows = await call('frappe.client.get_list', {
       doctype: 'Prospect',
       fields: [
@@ -338,7 +397,7 @@ async function loadPage(reset) {
       filters,
       limit_page_length: 500,
       limit_start:       reset ? 0 : start.value,
-      order_by:          'modified desc',
+      order_by:          sortBy.value,
     }) || []
     rows.forEach(r => { r._address_short = (r.address || '').split(',')[0] })
     if (reset) { prospects.value = rows } else { prospects.value.push(...rows) }
@@ -394,26 +453,16 @@ async function doRemoveFromList(names, unselectAll) {
   }
 }
 
-async function toggleDismissed() {
-  showDismissed.value = !showDismissed.value
-  await reload()
-}
-
 async function doDismiss(names, unselectAll) {
   if (!names.length) return
   dismissing.value = true
   try {
     const r = await call('prospecting.api.dismiss_prospects', { prospect_names: names })
-    // In the active view dismissed rows drop out; in the dismissed view they stay.
-    if (showDismissed.value) {
-      names.forEach(n => { const p = prospects.value.find(p => p.name === n); if (p) p.status = 'Dismissed' })
-    } else {
-      prospects.value = prospects.value.filter(p => !names.includes(p.name))
-      if (map) dropMarkers()
-    }
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
     unselectAll?.()
     toast.success(`Dismissed ${r.dismissed} prospect(s)`)
+    await reload()
+    reloadLists()
   } catch (e) {
     toast.error(e.message)
   } finally {
@@ -426,15 +475,10 @@ async function doRestore(names, unselectAll) {
   restoring.value = true
   try {
     const r = await call('prospecting.api.restore_prospects', { prospect_names: names })
-    // In the dismissed view restored rows drop out; in the active view they reappear via status.
-    if (showDismissed.value) {
-      prospects.value = prospects.value.filter(p => !names.includes(p.name))
-    } else {
-      names.forEach(n => { const p = prospects.value.find(p => p.name === n); if (p) p.status = 'New' })
-    }
-    if (map) dropMarkers()
     unselectAll?.()
     toast.success(`Restored ${r.restored} prospect(s)`)
+    await reload()
+    reloadLists()
   } catch (e) {
     toast.error(e.message)
   } finally {
