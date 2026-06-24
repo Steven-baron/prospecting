@@ -620,6 +620,28 @@ def remove_from_list(prospect_names):
 
 
 @frappe.whitelist()
+def move_to_list(prospect_names, target_list='', new_list_name=''):
+	"""Move prospects to another list. Either target_list (existing list name) or
+	new_list_name (creates a new Prospect List) must be provided."""
+	if isinstance(prospect_names, str):
+		prospect_names = json.loads(prospect_names)
+
+	if not target_list and new_list_name:
+		doc = frappe.new_doc('Prospect List')
+		doc.list_name = new_list_name.strip()
+		doc.insert(ignore_permissions=True)
+		target_list = doc.name
+
+	if not target_list:
+		frappe.throw('Pick a target list or enter a new list name.')
+
+	for name in prospect_names:
+		frappe.db.set_value('Prospect', name, 'prospect_list', target_list)
+	frappe.db.commit()
+	return {'moved': len(prospect_names), 'target_list': target_list}
+
+
+@frappe.whitelist()
 def dismiss_prospects(prospect_names):
 	"""Mark prospects as Dismissed: hidden from the active list, but the record is
 	kept (and keeps its list link) so re-searching the same area won't re-import them

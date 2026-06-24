@@ -146,6 +146,14 @@
       size: 'sm',
       actions: confirmActions,
     }" />
+
+    <!-- Move to list dialog -->
+    <MoveToListDialog
+      v-model="showMoveDialog"
+      :names="moveNames"
+      :lists="lists"
+      :current-list="listName"
+      @moved="onMoved" />
   </div>
 </template>
 
@@ -160,6 +168,7 @@ import ProspectDetail from '../components/ProspectDetail.vue'
 import FilterControl from '../components/FilterControl.vue'
 import SortControl from '../components/SortControl.vue'
 import ColumnSettings from '../components/ColumnSettings.vue'
+import MoveToListDialog from '../components/MoveToListDialog.vue'
 import { call } from '../composables/api.js'
 
 const props = defineProps({
@@ -284,6 +293,22 @@ const dismissing    = ref(false)
 const restoring     = ref(false)
 const deleting      = ref(false)
 
+// Move-to-list dialog state
+const showMoveDialog = ref(false)
+const moveNames      = ref([])
+const moveUnselect   = ref(null)
+function openMoveDialog(names, unselectAll) {
+  if (!names.length) return
+  moveNames.value = names
+  moveUnselect.value = unselectAll || null
+  showMoveDialog.value = true
+}
+async function onMoved() {
+  moveUnselect.value?.()
+  await reload()
+  reloadLists()
+}
+
 // Map state
 const showMap = ref(false)
 const mapEl   = ref(null)
@@ -304,6 +329,7 @@ function bulkActions(names, unselectAll) {
   } else {
     opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss(names, unselectAll) })
   }
+  opts.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => openMoveDialog(names, unselectAll) })
   if (props.listName) {
     opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList(names, unselectAll) })
   }
@@ -322,6 +348,7 @@ function rowMenuOptions(row) {
   } else {
     opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss([row.name], null) })
   }
+  opts.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => openMoveDialog([row.name], null) })
   if (props.listName) {
     opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList([row.name], null) })
   }
