@@ -25,9 +25,11 @@
         <Button variant="ghost" icon="refresh-cw" :loading="loading" @click="reload" />
         <FilterControl v-model="advFilters" :fields="FILTER_FIELDS" @apply="reload" />
         <SortControl v-model="sortRules" :fields="FILTER_FIELDS" @apply="reload" />
-        <Dropdown :options="columnsMenu" :close-on-click="false">
-          <Button variant="subtle" label="Columns" icon-left="columns" />
-        </Dropdown>
+        <ColumnSettings
+          :catalog="COLUMN_CATALOG"
+          :defaults="DEFAULT_COLUMN_KEYS"
+          storage-key="prospecting.columns"
+          @update="onColumnsUpdate" />
       </div>
     </div>
 
@@ -149,6 +151,7 @@ import {
 import ProspectDetail from '../components/ProspectDetail.vue'
 import FilterControl from '../components/FilterControl.vue'
 import SortControl from '../components/SortControl.vue'
+import ColumnSettings from '../components/ColumnSettings.vue'
 import { call } from '../composables/api.js'
 
 const props = defineProps({
@@ -161,7 +164,9 @@ const reloadLists = inject('reloadLists', () => {})
 
 const STATUSES = ['New', 'Lead', 'Dismissed']
 
-const ALL_COLUMNS = [
+// Full catalog of selectable columns (Business Name is pinned first; actions
+// are appended automatically and not user-managed).
+const COLUMN_CATALOG = [
   { label: 'Business Name', key: 'prospect_name',  width: '220px' },
   { label: 'Category',      key: 'category',        width: '130px' },
   { label: 'Owner Name',    key: 'owner_name',      width: '150px' },
@@ -175,47 +180,28 @@ const ALL_COLUMNS = [
   { label: 'Territory',     key: 'territory',        width: '120px' },
   { label: 'Follow-up',     key: 'next_follow_up',   width: '110px' },
   { label: 'Status',        key: 'status',           width: '130px' },
-  { label: '',              key: '_actions',          width: '60px'  },
 ]
+const DEFAULT_COLUMN_KEYS = [
+  'prospect_name', 'category', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status',
+]
+const ACTIONS_COL = { label: '', key: '_actions', width: '60px' }
 
 const MAP_COLUMNS = [
   { label: 'Business Name', key: 'prospect_name', width: '200px' },
   { label: 'Rating',        key: 'rating',        width: '70px'  },
   { label: 'Status',        key: 'status',        width: '120px' },
-  { label: '',              key: '_actions',       width: '60px'  },
+  ACTIONS_COL,
 ]
 
-// Columns the user can show/hide (Business Name, Status, actions are always shown)
-const OPTIONAL_COLS = [
-  { label: 'Category',   key: 'category' },
-  { label: 'Owner Name', key: 'owner_name' },
-  { label: 'Address',    key: '_address_short' },
-  { label: 'Phone',      key: 'mobile_no' },
-  { label: 'Email',      key: 'email_id' },
-  { label: 'Website',    key: 'website' },
-  { label: 'Rating',     key: 'rating' },
-  { label: 'Reviews',    key: 'review_count' },
-  { label: 'Source',     key: 'source' },
-  { label: 'Territory',  key: 'territory' },
-  { label: 'Follow-up',  key: 'next_follow_up' },
-]
-const visibleCols = ref({
-  category: true, owner_name: true, _address_short: true, mobile_no: true, rating: true,
-  email_id: false, website: false, review_count: false, source: false, territory: false, next_follow_up: false,
-})
+// User-managed active columns (set by ColumnSettings via @update), + actions appended.
+const activeColumns = ref(DEFAULT_COLUMN_KEYS.map(k => COLUMN_CATALOG.find(c => c.key === k)).filter(Boolean))
 
 const columns = computed(() => {
   if (showMap.value) return MAP_COLUMNS
-  return ALL_COLUMNS.filter(c => !(c.key in visibleCols.value) || visibleCols.value[c.key])
+  return [...activeColumns.value, ACTIONS_COL]
 })
 
-const columnsMenu = computed(() =>
-  OPTIONAL_COLS.map(c => ({
-    label: c.label,
-    icon: visibleCols.value[c.key] ? 'check-square' : 'square',
-    onClick: () => { visibleCols.value[c.key] = !visibleCols.value[c.key] },
-  }))
-)
+function onColumnsUpdate(cols) { activeColumns.value = cols }
 
 // Quick-filter + sort state
 const STATUS_FILTER_OPTIONS = [
