@@ -139,7 +139,7 @@
         @prev="goPrevDetail"
         @next="goNextDetail"
         @go-to-list="goToList"
-        @delete="name => { openDoc = null; doDeleteBulk([name], null) }"
+        @delete="deleteFromModal"
         @status-updated="onStatusUpdated"
         @field-updated="onFieldUpdated" />
 
@@ -536,6 +536,27 @@ const hasNextDetail = computed(() => openIndex.value >= 0 && openIndex.value < p
 async function goPrevDetail() { if (hasPrevDetail.value) await openDetail(prospects.value[openIndex.value - 1].name) }
 async function goNextDetail() { if (hasNextDetail.value) await openDetail(prospects.value[openIndex.value + 1].name) }
 function goToList(listName) { if (listName) { openDoc.value = null; router.push(`/list/${listName}`) } }
+
+// Delete from the modal: remove the record, then advance to the next row and
+// keep the modal open (or close if it was the last one). Note: we update the
+// list locally rather than reload() — reload() clears openDoc and would close
+// the modal.
+async function deleteFromModal(name) {
+  const idx = prospects.value.findIndex(p => p.name === name)
+  const neighbor = prospects.value[idx + 1]?.name || prospects.value[idx - 1]?.name || null
+  try {
+    await call('prospecting.api.delete_prospects', { prospect_names: [name] })
+    toast.success('Deleted')
+    prospects.value = prospects.value.filter(p => p.name !== name)
+    start.value = Math.max(0, start.value - 1)
+    if (map) dropMarkers()
+    reloadLists()
+    if (neighbor) await openDetail(neighbor)  // keep modal open on the next prospect
+    else openDoc.value = null
+  } catch (e) {
+    toast.error(e.message)
+  }
+}
 
 // Does a prospect with this status belong in the current filtered view?
 function matchesStatusFilter(status) {

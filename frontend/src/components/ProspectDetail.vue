@@ -125,9 +125,16 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex gap-2 border-t pt-3">
-          <Button label="Push to CRM" variant="solid" size="sm" :loading="pushingOne" @click="pushOneToCRM" />
-          <Button label="Delete" variant="subtle" theme="red" size="sm" @click="emit('delete', doc.name)" />
+        <div class="flex items-center gap-2 border-t pt-3">
+          <template v-if="!confirmingDelete">
+            <Button label="Push to CRM" variant="solid" size="sm" :loading="pushingOne" @click="pushOneToCRM" />
+            <Button label="Delete" variant="subtle" theme="red" size="sm" @click="confirmingDelete = true" />
+          </template>
+          <template v-else>
+            <span class="text-sm text-ink-gray-7">Delete this prospect? (can re-import later)</span>
+            <Button label="Cancel" variant="subtle" size="sm" class="ml-auto" @click="confirmingDelete = false" />
+            <Button label="Delete" variant="solid" theme="red" size="sm" @click="emit('delete', doc.name)" />
+          </template>
         </div>
 
       </div>
@@ -159,10 +166,11 @@ const STATUSES = ['New', 'Lead', 'Dismissed']
 const STATUS_COLORS = { New: 'bg-gray-400', Lead: 'bg-green-500', Dismissed: 'bg-red-400' }
 function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
 
-const findingEmail = ref(false)
-const localNotes   = ref('')
-const notesSaved   = ref(false)
-const pushingOne   = ref(false)
+const findingEmail    = ref(false)
+const localNotes      = ref('')
+const notesSaved      = ref(false)
+const pushingOne      = ref(false)
+const confirmingDelete = ref(false)
 let notesSavedTimer = null
 
 const ownerExamples = computed(() => {
@@ -172,6 +180,7 @@ const ownerExamples = computed(() => {
 watch(() => props.doc?.name, () => {
   localNotes.value = props.doc?.notes || ''
   notesSaved.value = false
+  confirmingDelete.value = false  // reset on navigate / new prospect
   tab.value = 'Details'  // reset to first tab when navigating to another prospect
 }, { immediate: true })
 
