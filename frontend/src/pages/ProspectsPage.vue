@@ -139,6 +139,7 @@
         @prev="goPrevDetail"
         @next="goNextDetail"
         @go-to-list="goToList"
+        @action="onModalAction"
         @delete="deleteFromModal"
         @status-updated="onStatusUpdated"
         @field-updated="onFieldUpdated" />
@@ -537,16 +538,15 @@ async function goPrevDetail() { if (hasPrevDetail.value) await openDetail(prospe
 async function goNextDetail() { if (hasNextDetail.value) await openDetail(prospects.value[openIndex.value + 1].name) }
 function goToList(listName) { if (listName) { openDoc.value = null; router.push(`/list/${listName}`) } }
 
-// Delete from the modal: remove the record, then advance to the next row and
-// keep the modal open (or close if it was the last one). Note: we update the
-// list locally rather than reload() — reload() clears openDoc and would close
-// the modal.
-async function deleteFromModal(name) {
+// Run an action on the current prospect, drop it from the active view, then
+// advance the modal to the next row (or close if it was the last). Updates the
+// list locally — reload() would clear openDoc and close the modal.
+async function modalActionAdvance(name, apiFn, successMsg) {
   const idx = prospects.value.findIndex(p => p.name === name)
   const neighbor = prospects.value[idx + 1]?.name || prospects.value[idx - 1]?.name || null
   try {
-    await call('prospecting.api.delete_prospects', { prospect_names: [name] })
-    toast.success('Deleted')
+    await apiFn()
+    if (successMsg) toast.success(successMsg)
     prospects.value = prospects.value.filter(p => p.name !== name)
     start.value = Math.max(0, start.value - 1)
     if (map) dropMarkers()
@@ -555,6 +555,34 @@ async function deleteFromModal(name) {
     else openDoc.value = null
   } catch (e) {
     toast.error(e.message)
+  }
+}
+
+function deleteFromModal(name) {
+  modalActionAdvance(name,
+    () => call('prospecting.api.delete_prospects', { prospect_names: [name] }), 'Deleted')
+}
+
+// ⋯ menu actions dispatched from the detail modal
+function onModalAction(type) {
+  const name = openDoc.value?.name
+  if (!name) return
+  if (type === 'dismiss') {
+    modalActionAdvance(name,
+      () => call('prospecting.api.dismiss_prospects', { prospect_names: [name] }), 'Dismissed')
+  } else if (type === 'remove') {
+    modalActionAdvance(name,
+      () => call('prospecting.api.remove_from_list', { prospect_names: [name] }), 'Removed from list')
+  } else if (type === 'restore') {
+    // restore keeps the modal on the same prospect (just flips status)
+    call('prospecting.api.restore_prospects', { prospect_names: [name] }).then(() => {
+      if (openDoc.value?.name === name) openDoc.value.status = 'New'
+      onStatusUpdated({ name, status: 'New' })
+      toast.success('Restored')
+    })
+  } else if (type === 'move') {
+    openDoc.value = null            // close modal so the move dialog isn't stacked behind it
+    openMoveDialog([name], null)
   }
 }
 

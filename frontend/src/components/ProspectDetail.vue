@@ -13,6 +13,9 @@
             @keydown.enter="e => e.target.blur()" />
         </div>
         <div class="flex flex-shrink-0 items-center gap-0.5">
+          <Dropdown :options="menuOptions" placement="bottom-end">
+            <Button variant="ghost" icon="more-horizontal" />
+          </Dropdown>
           <Button variant="ghost" icon="chevron-left" :disabled="!hasPrev" @click="emit('prev')" />
           <Button variant="ghost" icon="chevron-right" :disabled="!hasNext" @click="emit('next')" />
           <Button variant="ghost" icon="x" @click="emit('close')" />
@@ -124,17 +127,11 @@
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="flex items-center gap-2 border-t pt-3">
-          <template v-if="!confirmingDelete">
-            <Button label="Push to CRM" variant="solid" size="sm" :loading="pushingOne" @click="pushOneToCRM" />
-            <Button label="Delete" variant="subtle" theme="red" size="sm" @click="confirmingDelete = true" />
-          </template>
-          <template v-else>
-            <span class="text-sm text-ink-gray-7">Delete this prospect? (can re-import later)</span>
-            <Button label="Cancel" variant="subtle" size="sm" class="ml-auto" @click="confirmingDelete = false" />
-            <Button label="Delete" variant="solid" theme="red" size="sm" @click="emit('delete', doc.name)" />
-          </template>
+        <!-- Inline delete confirm (triggered from the ⋯ menu) -->
+        <div v-if="confirmingDelete" class="flex items-center gap-2 border-t pt-3">
+          <span class="text-sm text-ink-gray-7">Delete this prospect? (can re-import later)</span>
+          <Button label="Cancel" variant="subtle" size="sm" class="ml-auto" @click="confirmingDelete = false" />
+          <Button label="Delete" variant="solid" theme="red" size="sm" @click="emit('delete', doc.name)" />
         </div>
 
       </div>
@@ -152,7 +149,24 @@ const props = defineProps({
   hasPrev: { type: Boolean, default: false },
   hasNext: { type: Boolean, default: false },
 })
-const emit = defineEmits(['close', 'delete', 'status-updated', 'field-updated', 'prev', 'next', 'go-to-list'])
+const emit = defineEmits(['close', 'delete', 'status-updated', 'field-updated', 'prev', 'next', 'go-to-list', 'action'])
+
+// ⋯ menu — full single-record action set
+const menuOptions = computed(() => {
+  const o = [
+    { label: 'Push to CRM', icon: 'external-link', onClick: pushOneToCRM },
+    { label: 'Find Owner Names', icon: 'user', onClick: findOwnerNames },
+  ]
+  if (props.doc?.status === 'Dismissed')
+    o.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => emit('action', 'restore') })
+  else
+    o.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => emit('action', 'dismiss') })
+  o.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => emit('action', 'move') })
+  if (props.doc?.prospect_list)
+    o.push({ label: 'Remove from list', icon: 'x', onClick: () => emit('action', 'remove') })
+  o.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => { confirmingDelete.value = true } })
+  return o
+})
 
 const show = computed({
   get: () => !!props.doc,
@@ -220,6 +234,32 @@ async function onStatus(status) {
   await call('frappe.client.set_value', { doctype: 'Prospect', name: props.doc.name, fieldname: 'status', value: status })
   props.doc.status = status
   emit('status-updated', { name: props.doc.name, status })
+}
+
+const findingOwners = ref(false)
+async function findOwnerNames() {
+  if (!props.doc) return
+  findingOwners.value = true
+  const tid = toast.create({ message: 'Finding owner name…', type: 'info', duration: 600 })
+  try {
+    const r = await call('prospecting.api.find_owner_names', { prospect_names: [props.doc.name] })
+    const data = r.results?.[props.doc.name]
+    if (data?.owner_name) {
+      props.doc.owner_name = data.owner_name
+      props.doc.owner_name_context = JSON.stringify(data.examples || [])
+      emit('field-updated', { name: props.doc.name, key: 'owner_name', value: data.owner_name })
+      toast.success(`Owner: ${data.owner_name}`)
+    } else if (r.errors?.length) {
+      toast.error(r.errors[0].error)
+    } else {
+      toast.warning('No owner name found.')
+    }
+  } catch (e) {
+    toast.error(e.message)
+  } finally {
+    toast.remove(tid)
+    findingOwners.value = false
+  }
 }
 
 async function findEmail() {
