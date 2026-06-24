@@ -75,6 +75,10 @@
             <span v-else-if="column.key === 'rating'" class="text-amber-500 text-sm">
               {{ item != null ? `★ ${Number(item).toFixed(1)}` : '—' }}
             </span>
+            <a v-else-if="column.key === 'email_id' && item" :href="`mailto:${item}`" @click.stop
+              class="truncate text-sm text-ink-blue-2">{{ item }}</a>
+            <a v-else-if="column.key === 'website' && item" :href="item" target="_blank" rel="noreferrer" @click.stop
+              class="truncate text-sm text-ink-blue-2">{{ item.replace(/^https?:\/\/(www\.)?/, '') }}</a>
             <div v-else-if="column.key === '_actions'" class="flex justify-end items-center gap-0.5" @click.stop>
               <button @click="openDetail(row.name)"
                 class="rounded p-1 text-ink-gray-3 hover:bg-surface-gray-2 hover:text-ink-gray-7"
@@ -126,7 +130,8 @@
         :doc="openDoc"
         @close="openDoc = null"
         @delete="deleteProspect"
-        @status-updated="onStatusUpdated" />
+        @status-updated="onStatusUpdated"
+        @field-updated="onFieldUpdated" />
 
     </div>
   </div>
@@ -155,9 +160,16 @@ const STATUSES = ['New', 'Lead', 'Dismissed']
 const ALL_COLUMNS = [
   { label: 'Business Name', key: 'prospect_name',  width: '220px' },
   { label: 'Category',      key: 'category',        width: '130px' },
-  { label: 'Address',       key: '_address_short',  width: '200px' },
+  { label: 'Owner Name',    key: 'owner_name',      width: '150px' },
+  { label: 'Address',       key: '_address_short',  width: '180px' },
   { label: 'Phone',         key: 'mobile_no',        width: '140px' },
+  { label: 'Email',         key: 'email_id',         width: '180px' },
+  { label: 'Website',       key: 'website',          width: '160px' },
   { label: 'Rating',        key: 'rating',           width: '80px'  },
+  { label: 'Reviews',       key: 'review_count',     width: '90px'  },
+  { label: 'Source',        key: 'source',           width: '120px' },
+  { label: 'Territory',     key: 'territory',        width: '120px' },
+  { label: 'Follow-up',     key: 'next_follow_up',   width: '110px' },
   { label: 'Status',        key: 'status',           width: '130px' },
   { label: '',              key: '_actions',          width: '60px'  },
 ]
@@ -171,12 +183,22 @@ const MAP_COLUMNS = [
 
 // Columns the user can show/hide (Business Name, Status, actions are always shown)
 const OPTIONAL_COLS = [
-  { label: 'Category', key: 'category' },
-  { label: 'Address',  key: '_address_short' },
-  { label: 'Phone',    key: 'mobile_no' },
-  { label: 'Rating',   key: 'rating' },
+  { label: 'Category',   key: 'category' },
+  { label: 'Owner Name', key: 'owner_name' },
+  { label: 'Address',    key: '_address_short' },
+  { label: 'Phone',      key: 'mobile_no' },
+  { label: 'Email',      key: 'email_id' },
+  { label: 'Website',    key: 'website' },
+  { label: 'Rating',     key: 'rating' },
+  { label: 'Reviews',    key: 'review_count' },
+  { label: 'Source',     key: 'source' },
+  { label: 'Territory',  key: 'territory' },
+  { label: 'Follow-up',  key: 'next_follow_up' },
 ]
-const visibleCols = ref({ category: true, _address_short: true, mobile_no: true, rating: true })
+const visibleCols = ref({
+  category: true, owner_name: true, _address_short: true, mobile_no: true, rating: true,
+  email_id: false, website: false, review_count: false, source: false, territory: false, next_follow_up: false,
+})
 
 const columns = computed(() => {
   if (showMap.value) return MAP_COLUMNS
@@ -392,7 +414,7 @@ async function loadPage(reset) {
         'name', 'prospect_name', 'category', 'address', 'mobile_no',
         'email_id', 'website', 'rating', 'review_count', 'status',
         'prospect_list', 'lat', 'lng', 'google_maps_uri', 'notes', 'crm_lead',
-        'owner_name',
+        'owner_name', 'source', 'territory', 'next_follow_up',
       ],
       filters,
       limit_page_length: 500,
@@ -442,6 +464,14 @@ function onStatusUpdated({ name, status }) {
   if (p) p.status = status
   if (openDoc.value?.name === name) openDoc.value.status = status
   reconcileRow(name, status)
+}
+
+function onFieldUpdated({ name, key, value }) {
+  const p = prospects.value.find(p => p.name === name)
+  if (p) {
+    p[key] = value
+    if (key === 'address') p._address_short = (value || '').split(',')[0]
+  }
 }
 
 async function deleteProspect(name) {
