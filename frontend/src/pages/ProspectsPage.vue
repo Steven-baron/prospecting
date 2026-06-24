@@ -138,6 +138,14 @@
         @field-updated="onFieldUpdated" />
 
     </div>
+
+    <!-- Confirm dialog -->
+    <Dialog v-model="confirmDialog.show" :options="{
+      title: confirmDialog.title,
+      message: confirmDialog.message,
+      size: 'sm',
+      actions: confirmActions,
+    }" />
   </div>
 </template>
 
@@ -146,7 +154,7 @@ import { ref, computed, watch, inject, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ListView, ListHeader, ListRows, ListEmptyState, ListSelectBanner,
-  Button, Badge, Dropdown, Select, TextInput, toast,
+  Button, Badge, Dropdown, Select, TextInput, Dialog, toast,
 } from 'frappe-ui'
 import ProspectDetail from '../components/ProspectDetail.vue'
 import FilterControl from '../components/FilterControl.vue'
@@ -163,6 +171,20 @@ const lists       = inject('lists', ref([]))
 const reloadLists = inject('reloadLists', () => {})
 
 const STATUSES = ['New', 'Lead', 'Dismissed']
+
+// ── Confirm dialog (frappe-ui Dialog) ────────────────────────────────────────
+const confirmDialog = ref({ show: false, title: '', message: '', confirmLabel: 'Confirm', danger: false })
+let confirmCb = null
+function askConfirm({ title, message, confirmLabel = 'Confirm', danger = false }, onYes) {
+  confirmDialog.value = { show: true, title, message, confirmLabel, danger }
+  confirmCb = onYes
+}
+const confirmActions = computed(() => [{
+  label: confirmDialog.value.confirmLabel,
+  variant: 'solid',
+  theme: confirmDialog.value.danger ? 'red' : 'gray',
+  onClick: (close) => { close(); const cb = confirmCb; confirmCb = null; cb?.() },
+}])
 
 // Full catalog of selectable columns (Business Name is pinned first; actions
 // are appended automatically and not user-managed).
@@ -516,25 +538,29 @@ async function doRemoveFromList(names, unselectAll) {
   }
 }
 
-async function doDeleteBulk(names, unselectAll) {
+function doDeleteBulk(names, unselectAll) {
   if (!names.length) return
-  const msg = `Permanently delete ${names.length} prospect(s)?\n\n` +
-    `This removes the record entirely — unlike Dismiss, the same business CAN ` +
-    `reappear on a future search.`
-  if (!confirm(msg)) return
-  deleting.value = true
-  try {
-    const r = await call('prospecting.api.delete_prospects', { prospect_names: names })
-    if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
-    unselectAll?.()
-    toast.success(`Deleted ${r.deleted} prospect(s)`)
-    await reload()
-    reloadLists()
-  } catch (e) {
-    toast.error(e.message)
-  } finally {
-    deleting.value = false
-  }
+  askConfirm({
+    title: `Delete ${names.length} prospect(s)?`,
+    message: 'This removes the record entirely — unlike Dismiss, the same business ' +
+      'CAN reappear on a future search.',
+    confirmLabel: 'Delete',
+    danger: true,
+  }, async () => {
+    deleting.value = true
+    try {
+      const r = await call('prospecting.api.delete_prospects', { prospect_names: names })
+      if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
+      unselectAll?.()
+      toast.success(`Deleted ${r.deleted} prospect(s)`)
+      await reload()
+      reloadLists()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      deleting.value = false
+    }
+  })
 }
 
 async function doDismiss(names, unselectAll) {
@@ -635,18 +661,23 @@ async function doFindOwnerNames(names, unselectAll) {
   }
 }
 
-async function confirmDeleteList() {
+function confirmDeleteList() {
   const listObj = lists.value.find(l => l.name === props.listName)
   const label   = listObj?.list_name || props.listName
   const count   = listObj?._count || 0
-  const msg     = count
-    ? `Delete list "${label}" and its ${count} prospect(s)?`
-    : `Delete list "${label}"?`
-  if (!confirm(msg)) return
-  await call('prospecting.api.delete_list', { list_name: props.listName })
-  toast.success(`List "${label}" deleted`)
-  await reloadLists()
-  router.push('/all')
+  askConfirm({
+    title: `Delete list "${label}"?`,
+    message: count
+      ? `This deletes the list and its ${count} prospect(s).`
+      : 'This deletes the list.',
+    confirmLabel: 'Delete list',
+    danger: true,
+  }, async () => {
+    await call('prospecting.api.delete_list', { list_name: props.listName })
+    toast.success(`List "${label}" deleted`)
+    await reloadLists()
+    router.push('/all')
+  })
 }
 </script>
 
