@@ -16,34 +16,39 @@
       </div>
     </template>
     <template #body-main>
-      <div class="min-w-[360px] p-2">
+      <div class="w-[440px] p-2">
         <div v-if="modelValue.length" class="flex flex-col gap-2">
           <div v-for="(f, i) in modelValue" :key="i" class="flex items-center gap-1.5">
-            <span class="w-10 text-sm text-ink-gray-5">{{ i === 0 ? 'Where' : 'And' }}</span>
+            <span class="w-9 shrink-0 text-sm text-ink-gray-5">{{ i === 0 ? 'Where' : 'And' }}</span>
             <Autocomplete
-              class="w-32"
+              class="w-32 shrink-0"
               :options="fieldOptions"
               :model-value="f.field"
               placeholder="Field"
               @update:model-value="v => setField(i, v)" />
             <FormControl
-              class="w-24"
+              class="w-24 shrink-0"
               type="select"
               :options="operatorsFor(f.field)"
               :model-value="f.operator"
               @update:model-value="v => update(i, 'operator', v)" />
-            <component
-              :is="valueIsSelect(f) ? 'select' : 'input'"
-              v-if="!isUnary(f.operator)"
-              class="form-input h-7 w-28 text-sm"
-              :value="f.value"
-              @change="e => update(i, 'value', e.target.value)">
-              <template v-if="valueIsSelect(f)">
-                <option v-for="o in valueOptions(f.field)" :key="o" :value="o">{{ o }}</option>
-              </template>
-            </component>
-            <div v-else class="w-28" />
-            <Button variant="ghost" icon="x" @click="remove(i)" />
+            <FormControl
+              v-if="!isUnary(f.operator) && valueIsSelect(f)"
+              class="min-w-0 flex-1"
+              type="select"
+              :options="valueOptions(f.field)"
+              :model-value="f.value"
+              @update:model-value="v => update(i, 'value', v)" />
+            <FormControl
+              v-else-if="!isUnary(f.operator)"
+              class="min-w-0 flex-1"
+              type="text"
+              :model-value="f.value"
+              placeholder="Value"
+              :debounce="300"
+              @update:model-value="v => update(i, 'value', v)" />
+            <div v-else class="flex-1" />
+            <Button variant="ghost" icon="x" class="shrink-0" @click="remove(i)" />
           </div>
         </div>
         <div v-else class="px-1 py-2 text-sm text-ink-gray-5">No filters applied</div>
