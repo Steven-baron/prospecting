@@ -16,13 +16,15 @@
       </div>
     </div>
 
-    <!-- Toolbar: quick filters + sort + columns -->
+    <!-- Toolbar: quick filters + refresh / filter / sort / columns -->
     <div class="flex items-center gap-2 border-b px-5 py-2 flex-shrink-0">
-      <TextInput v-model="fName" placeholder="Business name" class="w-44" />
-      <TextInput v-model="fCategory" placeholder="Category" class="w-36" />
-      <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="w-32" />
+      <TextInput v-model="fName" placeholder="Business name" class="w-40" />
+      <TextInput v-model="fCategory" placeholder="Category" class="w-32" />
+      <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="w-28" />
       <div class="ml-auto flex items-center gap-2">
-        <Select v-model="sortBy" :options="SORT_OPTIONS" class="w-40" />
+        <Button variant="ghost" icon="refresh-cw" :loading="loading" @click="reload" />
+        <FilterControl v-model="advFilters" :fields="FILTER_FIELDS" @apply="reload" />
+        <SortControl v-model="sortRules" :fields="FILTER_FIELDS" @apply="reload" />
         <Dropdown :options="columnsMenu" :close-on-click="false">
           <Button variant="subtle" label="Columns" icon-left="columns" />
         </Dropdown>
@@ -145,6 +147,8 @@ import {
   Button, Badge, Dropdown, Select, TextInput, toast,
 } from 'frappe-ui'
 import ProspectDetail from '../components/ProspectDetail.vue'
+import FilterControl from '../components/FilterControl.vue'
+import SortControl from '../components/SortControl.vue'
 import { call } from '../composables/api.js'
 
 const props = defineProps({
@@ -221,19 +225,42 @@ const STATUS_FILTER_OPTIONS = [
   { label: 'Dismissed', value: 'Dismissed' },
   { label: 'All',       value: 'All'       },
 ]
-const SORT_OPTIONS = [
-  { label: 'Newest',          value: 'modified desc'      },
-  { label: 'Oldest',          value: 'modified asc'       },
-  { label: 'Name A–Z',        value: 'prospect_name asc'  },
-  { label: 'Name Z–A',        value: 'prospect_name desc' },
-  { label: 'Rating high–low', value: 'rating desc'        },
-  { label: 'Rating low–high', value: 'rating asc'         },
+// Fields available in the Filter / Sort builders
+const FILTER_FIELDS = [
+  { label: 'Business Name', fieldname: 'prospect_name',  fieldtype: 'Data'   },
+  { label: 'Category',      fieldname: 'category',        fieldtype: 'Data'   },
+  { label: 'Owner Name',    fieldname: 'owner_name',      fieldtype: 'Data'   },
+  { label: 'Email',         fieldname: 'email_id',        fieldtype: 'Data'   },
+  { label: 'Phone',         fieldname: 'mobile_no',       fieldtype: 'Data'   },
+  { label: 'Website',       fieldname: 'website',         fieldtype: 'Data'   },
+  { label: 'Address',       fieldname: 'address',         fieldtype: 'Data'   },
+  { label: 'Rating',        fieldname: 'rating',          fieldtype: 'Float'  },
+  { label: 'Reviews',       fieldname: 'review_count',    fieldtype: 'Int'    },
+  { label: 'Status',        fieldname: 'status',          fieldtype: 'Select', options: ['New', 'Lead', 'Dismissed'] },
+  { label: 'Source',        fieldname: 'source',          fieldtype: 'Data'   },
+  { label: 'Territory',     fieldname: 'territory',       fieldtype: 'Data'   },
+  { label: 'Follow-up',     fieldname: 'next_follow_up',  fieldtype: 'Date'   },
 ]
-const fName     = ref('')
-const fCategory = ref('')
-const fStatus   = ref('')
-const sortBy    = ref('modified desc')
+const fName      = ref('')
+const fCategory  = ref('')
+const fStatus    = ref('')
+const advFilters = ref([])  // [{field, operator, value}]
+const sortRules  = ref([{ field: 'modified', dir: 'desc' }])
 const viewingDismissed = computed(() => fStatus.value === 'Dismissed')
+
+// Map a builder condition to a frappe.client.get_list filter triple.
+function toFilterTriple(f) {
+  const v = f.value
+  switch (f.operator) {
+    case 'like':       return [f.field, 'like', `%${v}%`]
+    case 'not like':   return [f.field, 'not like', `%${v}%`]
+    case 'equals':     return [f.field, '=', v]
+    case 'not equals': return [f.field, '!=', v]
+    case 'is set':     return [f.field, 'is', 'set']
+    case 'is not set': return [f.field, 'is', 'not set']
+    default:           return [f.field, f.operator, v]  // = != > < >= <=
+  }
+}
 
 // List state
 const prospects    = ref([])
@@ -380,8 +407,8 @@ function handleRowClick(row) {
 // ── Data loading ─────────────────────────────────────────────────────────────
 
 watch(() => props.listName, () => reload())
-// status / sort apply immediately; text filters debounce
-watch([fStatus, sortBy], () => reload())
+// status applies immediately; text quick-filters debounce
+watch(fStatus, () => reload())
 let filterTimer
 watch([fName, fCategory], () => {
   clearTimeout(filterTimer)
@@ -408,6 +435,16 @@ async function loadPage(reset) {
     else if (fStatus.value !== 'All')      filters.push(['status', '=', fStatus.value])
     if (fName.value.trim())                filters.push(['prospect_name', 'like', `%${fName.value.trim()}%`])
     if (fCategory.value.trim())            filters.push(['category', 'like', `%${fCategory.value.trim()}%`])
+    // Advanced filters from the Filter builder
+    for (const f of advFilters.value) {
+      if (!f.field) continue
+      if (!['is set', 'is not set'].includes(f.operator) && (f.value === '' || f.value == null)) continue
+      filters.push(toFilterTriple(f))
+    }
+    const orderBy = (sortRules.value.length ? sortRules.value : [{ field: 'modified', dir: 'desc' }])
+      .filter(s => s.field)
+      .map(s => `${s.field} ${s.dir}`)
+      .join(', ')
     const rows = await call('frappe.client.get_list', {
       doctype: 'Prospect',
       fields: [
@@ -419,7 +456,7 @@ async function loadPage(reset) {
       filters,
       limit_page_length: 500,
       limit_start:       reset ? 0 : start.value,
-      order_by:          sortBy.value,
+      order_by:          orderBy || 'modified desc',
     }) || []
     rows.forEach(r => { r._address_short = (r.address || '').split(',')[0] })
     if (reset) { prospects.value = rows } else { prospects.value.push(...rows) }
