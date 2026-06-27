@@ -2,12 +2,12 @@
   <div class="flex flex-1 flex-col overflow-hidden">
 
     <!-- API Keys section -->
-    <div class="flex-shrink-0 border-b bg-surface-white px-6 py-5 space-y-4">
+    <div class="flex-shrink-0 border-b bg-surface-white px-4 sm:px-6 py-5 space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-semibold text-ink-gray-9">API Keys & AI</h2>
         <Button label="Save keys" variant="solid" size="sm" :loading="savingKeys" @click="saveKeys" />
       </div>
-      <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label class="mb-1 block text-xs font-semibold text-ink-gray-6">Google Places API Key</label>
           <input v-model="keys.google_places_api_key" type="password" autocomplete="off"
@@ -102,7 +102,7 @@
         @change="toggleSelectAll" />
       <span class="flex-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</span>
       <span class="w-20 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Status</span>
-      <span class="w-44 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Google Type</span>
+      <span class="hidden sm:block w-44 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Google Type</span>
     </div>
 
     <!-- Rows -->
@@ -136,7 +136,7 @@
           {{ cat.active ? 'Active' : 'Inactive' }}
         </span>
 
-        <span class="w-44 font-mono text-xs text-ink-gray-3 truncate text-right">{{ cat.value }}</span>
+        <span class="hidden sm:block w-44 font-mono text-xs text-ink-gray-3 truncate text-right">{{ cat.value }}</span>
       </div>
     </div>
 

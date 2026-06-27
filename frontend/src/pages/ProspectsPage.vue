@@ -2,34 +2,50 @@
   <div class="flex flex-1 flex-col overflow-hidden">
 
     <!-- Header -->
-    <div class="flex items-center justify-between border-b px-5 py-3 flex-shrink-0">
-      <div class="flex items-center gap-3">
-        <h1 class="text-lg font-semibold text-ink-gray-9">{{ pageTitle }}</h1>
+    <div class="flex items-center justify-between gap-2 border-b px-3 sm:px-5 py-3 flex-shrink-0">
+      <div class="flex min-w-0 items-center gap-3">
+        <h1 class="truncate text-lg font-semibold text-ink-gray-9">{{ pageTitle }}</h1>
         <Badge v-if="prospects.length" :label="String(prospects.length)" theme="gray" size="sm" />
       </div>
-      <div class="flex gap-2">
+
+      <!-- Desktop actions -->
+      <div class="hidden sm:flex flex-shrink-0 gap-2">
         <Button :label="showMap ? 'Hide Map' : 'Show Map'" variant="subtle" @click="toggleMap" />
         <Button v-if="listName" label="Delete list" variant="subtle"
           class="text-ink-red-3" @click="confirmDeleteList" />
         <Button label="Find Prospects" variant="solid" icon-left="search"
           @click="router.push('/search')" />
       </div>
+
+      <!-- Mobile actions: icon buttons + overflow -->
+      <div class="flex sm:hidden flex-shrink-0 items-center gap-1">
+        <Button variant="subtle" :icon="showMap ? 'list' : 'map'"
+          :label="undefined" @click="toggleMap" />
+        <Button variant="solid" icon="search" @click="router.push('/search')" />
+        <Dropdown v-if="listName" :options="[
+          { label: 'Delete list', icon: 'trash-2', theme: 'red', onClick: confirmDeleteList },
+        ]" placement="bottom-end">
+          <Button variant="ghost" icon="more-vertical" />
+        </Dropdown>
+      </div>
     </div>
 
     <!-- Toolbar: quick filters + refresh / filter / sort / columns -->
-    <div class="flex items-center gap-2 border-b px-5 py-2 flex-shrink-0">
-      <TextInput v-model="fName" placeholder="Business name" class="w-40" />
-      <TextInput v-model="fCategory" placeholder="Category" class="w-32" />
-      <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="w-28" />
+    <div class="flex flex-wrap items-center gap-2 border-b px-3 sm:px-5 py-2 flex-shrink-0">
+      <TextInput v-model="fName" placeholder="Business name" class="w-full sm:w-40" />
+      <TextInput v-model="fCategory" placeholder="Category" class="flex-1 sm:flex-none sm:w-32" />
+      <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="flex-1 sm:flex-none sm:w-28" />
       <div class="ml-auto flex items-center gap-2">
         <Button variant="ghost" icon="refresh-cw" :loading="loading" @click="reload" />
         <FilterControl v-model="advFilters" :fields="FILTER_FIELDS" @apply="reload" />
         <SortControl v-model="sortRules" :fields="FILTER_FIELDS" @apply="reload" />
-        <ColumnSettings
-          :catalog="COLUMN_CATALOG"
-          :defaults="DEFAULT_COLUMN_KEYS"
-          storage-key="prospecting.columns"
-          @update="onColumnsUpdate" />
+        <span class="hidden sm:block">
+          <ColumnSettings
+            :catalog="COLUMN_CATALOG"
+            :defaults="DEFAULT_COLUMN_KEYS"
+            storage-key="prospecting.columns"
+            @update="onColumnsUpdate" />
+        </span>
       </div>
     </div>
 
@@ -37,10 +53,22 @@
     <div class="flex flex-1 overflow-hidden">
 
       <!-- List panel -->
-      <div :class="showMap ? 'w-[42%] flex-shrink-0 border-r' : 'flex-1'"
-        class="relative flex flex-col overflow-hidden">
+      <div :class="showMap ? 'hidden sm:flex sm:w-[42%] sm:flex-shrink-0 sm:border-r' : 'flex flex-1'"
+        class="relative flex-col overflow-hidden">
 
-        <ListView v-if="prospects.length || loading"
+        <!-- Mobile: card list -->
+        <ProspectCardList v-if="isMobile && (prospects.length || loading)"
+          v-model="selectedRows"
+          :prospects="prospects"
+          :statuses="STATUSES"
+          :status-color="statusColor"
+          :row-menu="rowMenuOptions"
+          :bulk-actions="bulkActions"
+          @open="openDetail"
+          @update-status="e => updateStatus(e.name, e.status)" />
+
+        <!-- Desktop: dense table -->
+        <ListView v-else-if="prospects.length || loading"
           ref="listViewRef"
           :columns="columns"
           :rows="prospects"
@@ -172,11 +200,15 @@ import {
   Button, Badge, Dropdown, Select, TextInput, Dialog, toast,
 } from 'frappe-ui'
 import ProspectDetail from '../components/ProspectDetail.vue'
+import ProspectCardList from '../components/ProspectCardList.vue'
 import FilterControl from '../components/FilterControl.vue'
 import SortControl from '../components/SortControl.vue'
 import ColumnSettings from '../components/ColumnSettings.vue'
 import MoveToListDialog from '../components/MoveToListDialog.vue'
 import { call } from '../composables/api.js'
+import { useIsMobile } from '../composables/breakpoint.js'
+
+const isMobile = useIsMobile()
 
 const props = defineProps({
   listName: { type: String, default: null },

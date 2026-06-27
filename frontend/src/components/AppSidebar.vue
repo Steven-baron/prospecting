@@ -1,5 +1,5 @@
 <template>
-  <Sidebar :sections="navSections" v-model:collapsed="collapsed">
+  <Sidebar :sections="navSections" v-model:collapsed="collapsed" :disable-collapse="disableCollapse">
     <template #header>
       <div class="flex h-12 items-center gap-2 px-2 py-1">
         <div class="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-purple-600 text-sm text-white font-semibold">
@@ -70,8 +70,11 @@ import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucideSettings from '~icons/lucide/settings'
 
 const props = defineProps({
-  lists:      { type: Array,  default: () => [] },
-  totalCount: { type: Number, default: 0 },
+  lists:      { type: Array,   default: () => [] },
+  totalCount: { type: Number,  default: 0 },
+  // In the mobile drawer we force the sidebar expanded — otherwise frappe-ui's
+  // Sidebar auto-collapses to an icon rail below the `sm` breakpoint.
+  disableCollapse: { type: Boolean, default: false },
 })
 const emit = defineEmits(['create-list'])
 

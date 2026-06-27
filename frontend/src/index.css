@@ -33,3 +33,20 @@ html, body {
   height: 100%;
   overflow: hidden;
 }
+
+/* On phones the slide-over becomes a full-screen overlay sheet */
+@media (max-width: 767px) {
+  .pm-detail-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    width: 0;
+  }
+  .pm-detail-panel.open {
+    width: 100%;
+    border-left: none;
+  }
+  .pm-detail-inner {
+    width: 100vw;
+  }
+}

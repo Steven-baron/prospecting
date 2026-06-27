@@ -27,16 +27,27 @@
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
           <Select :options="depthOptions" v-model="depth" />
         </div>
-        <Button label="Search" variant="solid" icon-left="search"
+        <Button label="Search" variant="solid" icon-left="search" class="w-full sm:w-auto"
           :loading="searching" @click="search" />
       </div>
     </div>
 
     <!-- Body: results + map -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="relative flex flex-1 overflow-hidden">
+
+      <!-- Mobile list/map toggle -->
+      <div class="sm:hidden fixed bottom-4 left-1/2 z-30 -translate-x-1/2 flex rounded-full bg-ink-gray-9 p-0.5 shadow-lg">
+        <button @click="mobileView = 'list'"
+          class="rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
+          :class="mobileView === 'list' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">List</button>
+        <button @click="mobileView = 'map'"
+          class="rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
+          :class="mobileView === 'map' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">Map</button>
+      </div>
 
       <!-- Results panel -->
-      <div class="flex w-[42%] flex-shrink-0 flex-col border-r overflow-hidden">
+      <div class="w-full sm:w-[42%] flex-shrink-0 flex-col border-r overflow-hidden"
+        :class="mobileView === 'map' ? 'hidden sm:flex' : 'flex'">
         <div class="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[42px]">
           <span class="text-sm text-ink-gray-6">
             <template v-if="results.length">
@@ -111,7 +122,8 @@
       </div>
 
       <!-- Map panel -->
-      <div class="relative flex-1 overflow-hidden">
+      <div class="relative flex-1 overflow-hidden"
+        :class="mobileView === 'list' ? 'hidden sm:block' : 'block'">
         <div ref="mapEl" class="h-full w-full" />
         <div v-if="!mapReady"
           class="absolute inset-0 flex items-center justify-center bg-surface-gray-1 text-ink-gray-5">
@@ -170,11 +182,14 @@ export default { name: 'SearchPage' }
 </script>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, TextInput, Select, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
 import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
+
+// Mobile-only view toggle between the results list and the map
+const mobileView = ref('list')
 
 const router      = useRouter()
 const lists       = inject('lists', ref([]))
@@ -211,6 +226,17 @@ const resultsListEl = ref(null)
 const highlightedId = ref(null)
 const activeResult  = ref(null)
 let map = null, markers = [], cityFeatures = [], cityGeoJson = null
+
+// When the mobile toggle reveals the map, Google Maps needs a resize nudge
+// (it was display:none, so it sized to 0) plus a re-fit to the current markers.
+watch(mobileView, (v) => {
+  if (v !== 'map' || !map) return
+  nextTick(() => {
+    google.maps.event.trigger(map, 'resize')
+    if (results.value.length) dropMarkers()
+    else if (cityBounds.value) map.fitBounds(cityBounds.value, 0)
+  })
+})
 
 // Save state
 const showSaveDialog = ref(false)

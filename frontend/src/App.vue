@@ -2,9 +2,35 @@
   <FrappeUIProvider>
     <div class="flex h-full overflow-hidden bg-surface-white">
 
-      <AppSidebar :lists="lists" :total-count="totalCount" @create-list="showCreateList = true" />
+      <!-- Desktop: docked sidebar -->
+      <AppSidebar v-if="!isMobile"
+        :lists="lists" :total-count="totalCount" @create-list="showCreateList = true" />
+
+      <!-- Mobile: off-canvas drawer + backdrop -->
+      <template v-else>
+        <div v-if="drawerOpen" class="fixed inset-0 z-40 bg-black/40"
+          @click="drawerOpen = false" />
+        <div
+          class="fixed inset-y-0 left-0 z-50 w-60 max-w-[85%] transform shadow-xl transition-transform duration-200 ease-out"
+          :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
+          <AppSidebar
+            disable-collapse
+            :lists="lists" :total-count="totalCount"
+            @create-list="showCreateList = true; drawerOpen = false" />
+        </div>
+      </template>
 
       <main class="flex flex-1 flex-col overflow-hidden">
+        <!-- Mobile top bar with hamburger -->
+        <div v-if="isMobile"
+          class="flex h-12 flex-shrink-0 items-center gap-2 border-b bg-surface-white px-2">
+          <button class="-ml-0.5 rounded p-2 text-ink-gray-7 hover:bg-surface-gray-2"
+            aria-label="Open menu" @click="drawerOpen = true">
+            <LucideMenu class="size-5" />
+          </button>
+          <span class="truncate text-base font-semibold text-ink-gray-9">{{ mobileTitle }}</span>
+        </div>
+
         <router-view v-slot="{ Component }">
           <keep-alive include="SearchPage">
             <component :is="Component" />
@@ -43,16 +69,37 @@
 </template>
 
 <script setup>
-import { ref, provide, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, provide, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { FrappeUIProvider, Dialog, Button, FormControl, toast } from 'frappe-ui'
+import LucideMenu from '~icons/lucide/menu'
 import AppSidebar from './components/AppSidebar.vue'
 import { call } from './composables/api.js'
+import { useIsMobile } from './composables/breakpoint.js'
 
 const router = useRouter()
+const route  = useRoute()
+
+const isMobile   = useIsMobile()
+const drawerOpen = ref(false)
+
+// Close the drawer whenever the route changes (e.g. tapping a nav item)
+watch(() => route.fullPath, () => { drawerOpen.value = false })
 
 const lists      = ref([])
 const totalCount = ref(0)
+
+// Title shown in the mobile top bar, derived from the current route
+const mobileTitle = computed(() => {
+  const p = route.path
+  if (p === '/search')   return 'Find Prospects'
+  if (p === '/settings') return 'Settings'
+  if (p.startsWith('/list/')) {
+    const name = decodeURIComponent(route.params.name || '')
+    return lists.value.find(l => l.name === name)?.list_name || 'List'
+  }
+  return 'All Prospects'
+})
 
 const showCreateList = ref(false)
 const newListName    = ref('')
