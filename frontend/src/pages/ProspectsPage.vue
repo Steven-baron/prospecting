@@ -35,6 +35,11 @@
       <TextInput v-model="fName" placeholder="Business name" class="w-full sm:w-40" />
       <TextInput v-model="fCategory" placeholder="Category" class="flex-1 sm:flex-none sm:w-32" />
       <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="flex-1 sm:flex-none sm:w-28" />
+      <Button
+        :variant="hideInCrm ? 'solid' : 'subtle'"
+        :label="hideInCrm ? 'Hidden in CRM' : 'Hide in CRM'"
+        :tooltip="'Hide prospects already pushed to the CRM'"
+        @click="hideInCrm = !hideInCrm" />
       <div class="ml-auto flex items-center gap-2">
         <Button variant="ghost" icon="refresh-cw" :loading="loading" @click="reload" />
         <FilterControl v-model="advFilters" :fields="FILTER_FIELDS" @apply="reload" />
@@ -105,6 +110,12 @@
                 </button>
               </Dropdown>
             </div>
+            <a v-else-if="column.key === 'crm_lead' && item" :href="`/crm/leads/${item}`" target="_blank"
+              rel="noreferrer" @click.stop title="Open in CRM"
+              class="inline-flex items-center gap-1 text-sm font-medium text-ink-green-3 hover:underline">
+              <span class="size-2 rounded-full bg-green-500" /> In CRM
+            </a>
+            <span v-else-if="column.key === 'crm_lead'" class="text-sm text-ink-gray-4">—</span>
             <span v-else-if="column.key === 'rating'" class="text-amber-500 text-sm">
               {{ item != null ? `★ ${Number(item).toFixed(1)}` : '—' }}
             </span>
@@ -250,9 +261,10 @@ const COLUMN_CATALOG = [
   { label: 'Town',          key: 'territory',        width: '120px' },
   { label: 'Follow-up',     key: 'next_follow_up',   width: '110px' },
   { label: 'Status',        key: 'status',           width: '130px' },
+  { label: 'In CRM',        key: 'crm_lead',         width: '80px'  },
 ]
 const DEFAULT_COLUMN_KEYS = [
-  'prospect_name', 'category', 'territory', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status',
+  'prospect_name', 'category', 'territory', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status', 'crm_lead',
 ]
 const ACTIONS_COL = { label: '', key: '_actions', width: '60px' }
 
@@ -296,10 +308,12 @@ const FILTER_FIELDS = [
   { label: 'Source',        fieldname: 'source',          fieldtype: 'Data'   },
   { label: 'Town',          fieldname: 'territory',       fieldtype: 'Data'   },
   { label: 'Follow-up',     fieldname: 'next_follow_up',  fieldtype: 'Date'   },
+  { label: 'CRM Lead',      fieldname: 'crm_lead',        fieldtype: 'Data'   },
 ]
 const fName      = ref('')
 const fCategory  = ref('')
 const fStatus    = ref('')
+const hideInCrm  = ref(false)  // hide prospects already pushed to the CRM (crm_lead set)
 const advFilters = ref([])  // [{field, operator, value}]
 const sortRules  = ref([{ field: 'modified', dir: 'desc' }])
 const viewingDismissed = computed(() => fStatus.value === 'Dismissed')
@@ -485,6 +499,7 @@ function handleRowClick(row) {
 watch(() => props.listName, () => reload())
 // status applies immediately; text quick-filters debounce
 watch(fStatus, () => reload())
+watch(hideInCrm, () => reload())
 let filterTimer
 watch([fName, fCategory], () => {
   clearTimeout(filterTimer)
@@ -511,6 +526,7 @@ async function loadPage(reset) {
     else if (fStatus.value !== 'All')      filters.push(['status', '=', fStatus.value])
     if (fName.value.trim())                filters.push(['prospect_name', 'like', `%${fName.value.trim()}%`])
     if (fCategory.value.trim())            filters.push(['category', 'like', `%${fCategory.value.trim()}%`])
+    if (hideInCrm.value)                   filters.push(['crm_lead', 'is', 'not set'])
     // Advanced filters from the Filter builder
     for (const f of advFilters.value) {
       if (!f.field) continue
