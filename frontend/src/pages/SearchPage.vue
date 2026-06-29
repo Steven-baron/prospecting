@@ -23,11 +23,11 @@
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</p>
           <Autocomplete :options="categories" v-model="categoryOption" placeholder="Any category" />
         </div>
-        <div class="w-24">
+        <div class="w-24 shrink-0">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
-          <Select :options="depthOptions" v-model="depth" />
+          <Select :options="depthOptions" v-model="depth" class="w-full" />
         </div>
-        <Button label="Search" variant="solid" icon-left="search" class="w-full sm:w-auto"
+        <Button label="Search" variant="solid" icon-left="search" class="w-full shrink-0 sm:w-auto"
           :loading="searching" @click="search" />
       </div>
     </div>
