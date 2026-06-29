@@ -626,10 +626,18 @@ function matchesStatusFilter(status) {
 }
 
 // Drop a row from the view if its new status no longer matches the active filter.
+// If the dropped row is the one open in the modal, advance to the next row
+// (or the previous, or close if it was the only one) instead of closing.
 function reconcileRow(name, status) {
   if (matchesStatusFilter(status)) return
+  const wasOpen = openDoc.value?.name === name
+  const idx = prospects.value.findIndex(p => p.name === name)
+  const neighbor = wasOpen ? (prospects.value[idx + 1]?.name || prospects.value[idx - 1]?.name || null) : null
   prospects.value = prospects.value.filter(p => p.name !== name)
-  if (openDoc.value?.name === name) openDoc.value = null
+  if (wasOpen) {
+    if (neighbor) openDetail(neighbor)  // keep modal open on the next prospect
+    else openDoc.value = null
+  }
   if (map) dropMarkers()
   reloadLists()
 }
