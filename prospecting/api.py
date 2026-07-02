@@ -55,6 +55,14 @@ PLACE_CATEGORIES = [
 
 
 @frappe.whitelist()
+
+def _get_password(settings, field):
+	"""Missing password rows (fresh site, key never saved) read as empty."""
+	try:
+		return settings.get_password(field) or ''
+	except Exception:
+		return ''
+
 def setup_crm_custom_fields(*args, **kwargs):
 	"""One-time: create custom fields on CRM doctypes. Run once after install."""
 	FIELDS = [
@@ -86,7 +94,7 @@ def setup_crm_custom_fields(*args, **kwargs):
 @frappe.whitelist()
 def get_maps_api_key():
 	settings = frappe.get_single('Prospecting Settings')
-	return settings.get_password('google_maps_api_key') or ''
+	return _get_password(settings, 'google_maps_api_key')
 
 
 @frappe.whitelist()
@@ -139,13 +147,21 @@ def get_api_settings():
 	"""Return current API key settings for the prospecting settings UI."""
 	settings = frappe.get_single('Prospecting Settings')
 	fc_url   = settings.get('firecrawl_url') or ''
+
+	def pw(field):
+		# fresh sites have no stored password rows yet; treat missing as empty
+		try:
+			return settings.get_password(field) or ''
+		except Exception:
+			return ''
+
 	return {
-		'google_places_api_key': settings.get_password('google_places_api_key') or '',
-		'google_maps_api_key':   settings.get_password('google_maps_api_key')   or '',
-		'opencode_api_key':      settings.get_password('opencode_api_key')      or '',
+		'google_places_api_key': pw('google_places_api_key'),
+		'google_maps_api_key':   pw('google_maps_api_key'),
+		'opencode_api_key':      pw('opencode_api_key'),
 		'opencode_model':        settings.get('opencode_model') or 'opencode-go/deepseek-v4-flash',
 		'firecrawl_url':         fc_url,
-		'firecrawl_api_key':     (settings.get_password('firecrawl_api_key') or '') if fc_url else '',
+		'firecrawl_api_key':     pw('firecrawl_api_key') if fc_url else '',
 	}
 
 
@@ -305,7 +321,7 @@ def search_places(query, included_type='', region_code='', max_pages=2, bounds=N
 	from concurrent.futures import ThreadPoolExecutor
 
 	settings = frappe.get_single('Prospecting Settings')
-	api_key = settings.get_password('google_places_api_key')
+	api_key = _get_password(settings, 'google_places_api_key')
 	if not api_key:
 		frappe.throw('Google Places API key not configured. Go to Prospecting Settings.')
 
@@ -497,7 +513,7 @@ def enrich_email(prospect):
 		return {'email': None, 'reason': 'No website on file.'}
 	settings        = frappe.get_single('Prospecting Settings')
 	firecrawl_url   = settings.get('firecrawl_url') or ''
-	firecrawl_key   = settings.get_password('firecrawl_api_key') if firecrawl_url else ''
+	firecrawl_key   = _get_password(settings, 'firecrawl_api_key') if firecrawl_url else ''
 	email = _find_email_for_website(doc.website, firecrawl_url, firecrawl_key or '')
 	if not email:
 		return {'email': None, 'reason': 'No email found on website.'}
@@ -542,7 +558,7 @@ def import_prospects(prospects, list_name='', new_list_name='', enrich_email=0, 
 		from concurrent.futures import ThreadPoolExecutor
 		settings        = frappe.get_single('Prospecting Settings')
 		firecrawl_url   = settings.get('firecrawl_url') or ''
-		firecrawl_key   = (settings.get_password('firecrawl_api_key') or '') if firecrawl_url else ''
+		firecrawl_key   = _get_password(settings, 'firecrawl_api_key') if firecrawl_url else ''
 		def _safe_email(p):
 			try:
 				w = p.get('website') or ''
@@ -698,10 +714,14 @@ def push_to_crm(prospect_names):
 	for pname in prospect_names:
 		p = frappe.get_doc('Prospect', pname)
 
-		# If prospect already has a linked lead, just sync notes
+		# If prospect already has a linked lead, backfill its fields + sync notes
 		existing_lead = p.crm_lead or frappe.db.exists('CRM Lead', {'custom_prospect': pname})
 		if existing_lead:
+			_backfill_lead_from_prospect(p, existing_lead)
 			_sync_note_to_crm(p, existing_lead)
+			# keep the prospect's link in sync if it was matched by custom_prospect
+			if not p.crm_lead:
+				frappe.db.set_value('Prospect', pname, 'crm_lead', existing_lead)
 			lead_names[pname] = existing_lead
 			skipped += 1
 			continue
@@ -749,6 +769,30 @@ def push_to_crm(prospect_names):
 
 	frappe.db.commit()
 	return {'created': created, 'skipped': skipped, 'errors': errors, 'lead_names': lead_names}
+
+
+def _backfill_lead_from_prospect(prospect, lead_name):
+	"""Update an existing CRM Lead (and its linked Organization) with the
+	prospect's current info. Only non-empty prospect values are written, so we
+	never blank out data a user may have edited directly in the CRM."""
+	updates = {}
+	if prospect.website:
+		updates['website'] = prospect.website
+	if prospect.email_id:
+		updates['email'] = prospect.email_id
+	if prospect.mobile_no:
+		updates['mobile_no'] = prospect.mobile_no
+		updates['phone'] = prospect.mobile_no
+	if prospect.rating:
+		updates['custom_google_rating'] = prospect.rating
+	if updates:
+		frappe.db.set_value('CRM Lead', lead_name, updates)
+
+	# Mirror the website onto the linked Organization (CRM shows it there too)
+	if prospect.website:
+		org = frappe.db.get_value('CRM Lead', lead_name, 'organization')
+		if org:
+			frappe.db.set_value('CRM Organization', org, 'website', prospect.website)
 
 
 def _sync_note_to_crm(prospect, lead_name):
@@ -886,8 +930,8 @@ def find_owner_names(prospect_names):
 		prospect_names = json.loads(prospect_names)
 
 	settings         = frappe.get_single('Prospecting Settings')
-	google_api_key   = settings.get_password('google_places_api_key')
-	opencode_api_key = settings.get_password('opencode_api_key')
+	google_api_key   = _get_password(settings, 'google_places_api_key')
+	opencode_api_key = _get_password(settings, 'opencode_api_key')
 	ai_model         = settings.get('opencode_model') or 'opencode-go/deepseek-v4-flash'
 
 	if not google_api_key:
