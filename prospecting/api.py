@@ -55,9 +55,14 @@ PLACE_CATEGORIES = [
 
 
 def _get_password(settings, field):
-	"""Missing password rows (fresh site, key never saved) read as empty."""
+	"""Missing password rows (fresh site, key never saved) read as empty.
+
+	Must use raise_exception=False. A bare try/except on get_password still
+	leaves frappe.throw messages in the request log and the SPA shows
+	“Password not found for … google_places_api_key”.
+	"""
 	try:
-		return settings.get_password(field) or ''
+		return settings.get_password(field, raise_exception=False) or ''
 	except Exception:
 		return ''
 
@@ -74,8 +79,25 @@ def _conf_places_key(field):
 
 
 def _api_key(settings, field):
-	"""Tenant Prospecting Settings first, then platform site_config fallback."""
-	return _get_password(settings, field) or _conf_places_key(field)
+	"""Tenant Prospecting Settings first, then platform site_config fallback.
+
+	If conf has a key but the Password field was never written (common on
+	sites provisioned before inject, or inject that only set-config), copy
+	into Prospecting Settings once so later UI/export works.
+	"""
+	local = _get_password(settings, field)
+	if local:
+		return local
+	from_conf = _conf_places_key(field)
+	if from_conf:
+		try:
+			settings.set(field, from_conf)
+			settings.save(ignore_permissions=True)
+			frappe.db.commit()
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), 'prospecting backfill api key')
+		return from_conf
+	return ''
 
 
 @frappe.whitelist()
@@ -188,7 +210,7 @@ def get_api_settings():
 
 	def pw(field):
 		try:
-			return settings.get_password(field) or ''
+			return settings.get_password(field, raise_exception=False) or ''
 		except Exception:
 			return ''
 
