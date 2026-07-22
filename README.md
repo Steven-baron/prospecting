@@ -1,6 +1,19 @@
 ### Prospecting
 
-A simple prospecting CRM app
+Google Places–based prospect discovery and list management for Frappe / Business OS.
+
+### API keys (Places / Maps)
+
+| Mode | Where keys live |
+|------|-----------------|
+| **Standalone** | Prospecting → Settings (`google_places_api_key`, `google_maps_api_key`) |
+| **Platform (multi-tenant)** | Operator: Manager → **Integrations** → Google Places / Maps. New sites get keys at provision. Runtime: tenant Settings first, then `bos_google_*` site_config. |
+
+Details: [`DEPLOY.md`](./DEPLOY.md) (this repo) and `docs/INTEGRATIONS.md` in the
+`platform_control` / business_os_manager control-plane repo.
+
+Server search uses the **Places** key; the map UI uses the **Maps JavaScript** key
+(`get_maps_api_key`). Enable Places API (New) + Maps JavaScript API in Google Cloud.
 
 ### Installation
 

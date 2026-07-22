@@ -81,11 +81,34 @@ bench --site YOUR_SITE clear-cache
 
 ### Post-install configuration
 
+#### Standalone / single-site
+
 Open the prospecting app → Settings and enter your API keys:
+
 - **Google Places API key** (server-side, Places API New enabled)
 - **Google Maps API key** (client-side, Maps JavaScript API enabled)
 - **OpenCode Go API key** (from opencode.ai — for AI owner name extraction)
 - **Firecrawl URL + key** (optional — for JS-rendered site email enrichment)
+
+#### Platform mode (Business OS multi-tenant)
+
+The **control plane** can own Places/Maps keys for the whole fleet:
+
+1. Operator opens **Manager → Integrations → Google Places / Maps** and saves keys  
+   (control-plane doc: `platform_control` repo → `docs/INTEGRATIONS.md`).
+2. **New tenants** receive those keys automatically at provision:
+   - `site_config`: `bos_google_places_api_key`, `bos_google_maps_api_key`
+   - **Prospecting Settings** password fields (via `prospecting.api.apply_platform_api_keys`)
+3. At runtime, Prospecting resolves keys in this order:
+   1. Tenant **Prospecting Settings** (local override or provisioned copy)
+   2. Tenant `site_config` `bos_google_*` (platform inject fallback)
+
+Tenant Settings can still set **per-site overrides**. Empty password fields on
+save do **not** wipe existing keys (write-only). Saving platform keys does **not**
+auto-update existing tenants — re-inject or set Settings per site.
+
+OpenCode / Firecrawl remain **per-tenant** in Prospecting Settings (not on
+Platform Integrations yet).
 
 ---
 
