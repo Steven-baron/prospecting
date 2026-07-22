@@ -54,14 +54,48 @@ PLACE_CATEGORIES = [
 ]
 
 
-@frappe.whitelist()
-
 def _get_password(settings, field):
 	"""Missing password rows (fresh site, key never saved) read as empty."""
 	try:
 		return settings.get_password(field) or ''
 	except Exception:
 		return ''
+
+
+def _conf_places_key(field):
+	"""Platform-injected keys (provision writes bos_google_* on the tenant)."""
+	if field == 'google_places_api_key':
+		return (frappe.conf.get('bos_google_places_api_key')
+			or frappe.conf.get('google_places_api_key') or '')
+	if field == 'google_maps_api_key':
+		return (frappe.conf.get('bos_google_maps_api_key')
+			or frappe.conf.get('google_maps_api_key') or '')
+	return ''
+
+
+def _api_key(settings, field):
+	"""Tenant Prospecting Settings first, then platform site_config fallback."""
+	return _get_password(settings, field) or _conf_places_key(field)
+
+
+@frappe.whitelist()
+def apply_platform_api_keys(google_places_api_key=None, google_maps_api_key=None):
+	"""Called at provision: copy platform keys into Prospecting Settings (encrypted).
+
+	Does not clear existing keys when an argument is omitted or empty.
+	"""
+	settings = frappe.get_single('Prospecting Settings')
+	changed = False
+	if google_places_api_key is not None and str(google_places_api_key).strip():
+		settings.google_places_api_key = str(google_places_api_key).strip()
+		changed = True
+	if google_maps_api_key is not None and str(google_maps_api_key).strip():
+		settings.google_maps_api_key = str(google_maps_api_key).strip()
+		changed = True
+	if changed:
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+	return {'ok': True, 'updated': changed}
 
 def setup_crm_custom_fields(*args, **kwargs):
 	"""One-time: create custom fields on CRM doctypes. Run once after install."""
@@ -94,7 +128,7 @@ def setup_crm_custom_fields(*args, **kwargs):
 @frappe.whitelist()
 def get_maps_api_key():
 	settings = frappe.get_single('Prospecting Settings')
-	return _get_password(settings, 'google_maps_api_key')
+	return _api_key(settings, 'google_maps_api_key')
 
 
 @frappe.whitelist()
@@ -144,20 +178,28 @@ def save_categories(categories):
 
 @frappe.whitelist()
 def get_api_settings():
-	"""Return current API key settings for the prospecting settings UI."""
+	"""Return current API key settings for the prospecting settings UI.
+
+	Secrets: return the stored tenant value when set; never return platform
+	site_config keys. Flags indicate platform fallback is available.
+	"""
 	settings = frappe.get_single('Prospecting Settings')
 	fc_url   = settings.get('firecrawl_url') or ''
 
 	def pw(field):
-		# fresh sites have no stored password rows yet; treat missing as empty
 		try:
 			return settings.get_password(field) or ''
 		except Exception:
 			return ''
 
+	places_local = pw('google_places_api_key')
+	maps_local = pw('google_maps_api_key')
+
 	return {
-		'google_places_api_key': pw('google_places_api_key'),
-		'google_maps_api_key':   pw('google_maps_api_key'),
+		'google_places_api_key': places_local,
+		'google_maps_api_key':   maps_local,
+		'google_places_from_platform': (not places_local) and bool(_conf_places_key('google_places_api_key')),
+		'google_maps_from_platform': (not maps_local) and bool(_conf_places_key('google_maps_api_key')),
 		'opencode_api_key':      pw('opencode_api_key'),
 		'opencode_model':        settings.get('opencode_model') or 'opencode-go/deepseek-v4-flash',
 		'firecrawl_url':         fc_url,
@@ -169,19 +211,23 @@ def get_api_settings():
 def save_api_settings(google_places_api_key=None, google_maps_api_key=None,
                       opencode_api_key=None, opencode_model=None,
                       firecrawl_url=None, firecrawl_api_key=None):
-	"""Save API keys and AI model setting from the prospecting settings UI."""
+	"""Save API keys and AI model setting from the prospecting settings UI.
+
+	Password fields: empty string means leave unchanged (write-only), so a
+	blank form after load does not wipe platform-injected or existing keys.
+	"""
 	settings = frappe.get_single('Prospecting Settings')
-	if google_places_api_key is not None:
+	if google_places_api_key is not None and str(google_places_api_key).strip():
 		settings.google_places_api_key = google_places_api_key
-	if google_maps_api_key is not None:
+	if google_maps_api_key is not None and str(google_maps_api_key).strip():
 		settings.google_maps_api_key = google_maps_api_key
-	if opencode_api_key is not None:
+	if opencode_api_key is not None and str(opencode_api_key).strip():
 		settings.opencode_api_key = opencode_api_key
 	if opencode_model is not None:
 		settings.opencode_model = opencode_model
 	if firecrawl_url is not None:
 		settings.firecrawl_url = (firecrawl_url or '').strip()
-	if firecrawl_api_key is not None:
+	if firecrawl_api_key is not None and str(firecrawl_api_key).strip():
 		settings.firecrawl_api_key = firecrawl_api_key
 	settings.save(ignore_permissions=True)
 	frappe.db.commit()
@@ -321,9 +367,9 @@ def search_places(query, included_type='', region_code='', max_pages=2, bounds=N
 	from concurrent.futures import ThreadPoolExecutor
 
 	settings = frappe.get_single('Prospecting Settings')
-	api_key = _get_password(settings, 'google_places_api_key')
+	api_key = _api_key(settings, 'google_places_api_key')
 	if not api_key:
-		frappe.throw('Google Places API key not configured. Go to Prospecting Settings.')
+		frappe.throw('Google Places API key not configured. Set it in Prospecting Settings or ask the platform operator.')
 
 	max_pages = min(max(int(max_pages), 1), 3)
 
@@ -930,7 +976,7 @@ def find_owner_names(prospect_names):
 		prospect_names = json.loads(prospect_names)
 
 	settings         = frappe.get_single('Prospecting Settings')
-	google_api_key   = _get_password(settings, 'google_places_api_key')
+	google_api_key   = _api_key(settings, 'google_places_api_key')
 	opencode_api_key = _get_password(settings, 'opencode_api_key')
 	ai_model         = settings.get('opencode_model') or 'opencode-go/deepseek-v4-flash'
 
