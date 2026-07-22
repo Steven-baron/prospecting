@@ -21,7 +21,19 @@
         </div>
         <div class="flex-1 min-w-28">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</p>
-          <Autocomplete :options="categories" v-model="categoryOption" placeholder="Any category" />
+          <select
+            v-model="categoryValue"
+            class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+          >
+            <option value="">Any category</option>
+            <option
+              v-for="c in categories"
+              :key="c.value || c.label"
+              :value="c.value"
+            >
+              {{ c.label }}
+            </option>
+          </select>
         </div>
         <div class="w-24 shrink-0">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
@@ -214,7 +226,7 @@ export default { name: 'SearchPage' }
 <script setup>
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, TextInput, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import { Button, TextInput, Dialog, FormControl, Badge, toast } from 'frappe-ui'
 import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
 
@@ -228,7 +240,7 @@ const reloadLists = inject('reloadLists', () => {})
 // Search state
 const what      = ref('')
 const whereText = ref('')
-const categoryOption = ref(null)   // { label, value } object for Autocomplete
+const categoryValue = ref('')
 const depth     = ref('2')
 const categories = ref([])
 const results    = ref([])
@@ -286,7 +298,9 @@ watch(showSaveDialog, async (open) => {
 
 onMounted(async () => {
   const r = await call('prospecting.api.get_place_categories')
-  categories.value = (r || []).map(c => ({ label: c.label, value: c.value }))
+  categories.value = (r || [])
+    .map(c => ({ label: c.label, value: c.value ?? '' }))
+    .filter(c => c.label && c.value !== '')
 
   const kr  = await call('prospecting.api.get_maps_api_key')
   const key = (kr || '').trim()
@@ -416,7 +430,8 @@ function onRowClick(r) {
 
 async function search() {
   // Use category label as the search term when WHAT is left blank
-  const effectiveWhat = what.value.trim() || categoryOption.value?.label || ''
+  const catLabel = categories.value.find(c => c.value === categoryValue.value)?.label || ''
+  const effectiveWhat = what.value.trim() || catLabel || ''
   if (!effectiveWhat && !whereText.value) return
   const query = effectiveWhat && whereText.value
     ? `${effectiveWhat} in ${whereText.value}`
@@ -435,7 +450,7 @@ async function search() {
   clearMarkers()
   try {
     const r = await call('prospecting.api.search_places', {
-      query, included_type: categoryOption.value?.value || '',
+      query, included_type: categoryValue.value || '',
       max_pages: parseInt(depth.value),
       bounds: bounds_arg,
     })
