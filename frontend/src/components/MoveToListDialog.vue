@@ -12,12 +12,17 @@
             size="sm" label="New list" @click="mode = 'new'" />
         </div>
 
-        <!-- Existing list picker -->
-        <Select
+        <!-- Native select works inside Dialog (frappe-ui Select z-index issue) -->
+        <select
           v-if="mode === 'existing'"
           v-model="targetList"
-          :options="listOptions"
-          placeholder="Choose a list…" />
+          class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+        >
+          <option disabled value="">Choose a list…</option>
+          <option v-for="o in listOptions" :key="o.value" :value="o.value">
+            {{ o.label }}
+          </option>
+        </select>
 
         <!-- New list name -->
         <TextInput
@@ -38,7 +43,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Dialog, Button, Select, TextInput, toast } from 'frappe-ui'
+import { Dialog, Button, TextInput, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
 
 const props = defineProps({

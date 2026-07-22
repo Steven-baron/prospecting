@@ -138,20 +138,32 @@
       <SearchResultDetail :result="activeResult" @close="activeResult = null" />
     </div>
 
-    <!-- Save to List dialog -->
+    <!-- Save to List dialog — native <select> so menus work inside Dialog -->
     <Dialog v-model="showSaveDialog" :options="{ title: 'Save to Prospect List', size: 'sm' }">
       <template #body-content>
         <div class="space-y-4 px-1">
           <div>
             <p class="mb-1 text-sm font-medium text-ink-gray-7">Save to</p>
-            <Select :options="saveModeOptions" v-model="saveMode" />
+            <select
+              v-model="saveMode"
+              class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+            >
+              <option v-for="o in saveModeOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </option>
+            </select>
           </div>
           <div v-if="saveMode === 'existing'">
             <p class="mb-1 text-sm font-medium text-ink-gray-7">List</p>
-            <Select
-              :options="lists.map(l => ({ label: l.list_name, value: l.name }))"
+            <select
               v-model="saveListName"
-              placeholder="Select a list" />
+              class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+            >
+              <option disabled value="">Select a list</option>
+              <option v-for="l in lists" :key="l.name" :value="l.name">
+                {{ l.list_name || l.name }}
+              </option>
+            </select>
           </div>
           <div v-if="saveMode === 'new'">
             <FormControl label="New list name" type="text" v-model="saveNewName"
@@ -240,11 +252,18 @@ watch(mobileView, (v) => {
 
 // Save state
 const showSaveDialog = ref(false)
-const saveMode      = ref('existing')
+const saveMode      = ref('new')
 const saveListName  = ref('')
 const saveNewName   = ref('')
 const enrichEmail   = ref(false)
 const saving        = ref(false)
+
+watch(showSaveDialog, (open) => {
+  if (!open) return
+  saveMode.value = lists.value?.length ? 'existing' : 'new'
+  saveListName.value = ''
+  saveNewName.value = ''
+})
 
 onMounted(async () => {
   const r = await call('prospecting.api.get_place_categories')
