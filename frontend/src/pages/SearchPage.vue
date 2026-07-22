@@ -145,34 +145,45 @@
       <SearchResultDetail :result="activeResult" @close="activeResult = null" />
     </div>
 
-    <!-- Save to List dialog — native <select> so menus work inside Dialog -->
+    <!-- Save to List — buttons + list rows (no Select menus) -->
     <Dialog v-model="showSaveDialog" :options="{ title: 'Save to Prospect List', size: 'sm' }">
       <template #body-content>
         <div class="space-y-4 px-1">
-          <div>
-            <p class="mb-1 text-sm font-medium text-ink-gray-7">Save to</p>
-            <select
-              v-model="saveMode"
-              class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
-            >
-              <option v-for="o in saveModeOptions" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
+          <div class="flex gap-2">
+            <Button
+              size="sm"
+              :variant="saveMode === 'existing' ? 'solid' : 'subtle'"
+              label="Existing list"
+              :disabled="!lists.length"
+              @click="saveMode = 'existing'"
+            />
+            <Button
+              size="sm"
+              :variant="saveMode === 'new' ? 'solid' : 'subtle'"
+              label="New list"
+              @click="saveMode = 'new'"
+            />
           </div>
           <div v-if="saveMode === 'existing'">
-            <p class="mb-1 text-sm font-medium text-ink-gray-7">List</p>
-            <select
-              v-model="saveListName"
-              class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+            <div
+              v-if="lists.length"
+              class="max-h-48 overflow-y-auto rounded-md border border-outline-gray-2"
             >
-              <option disabled value="">Select a list</option>
-              <option v-for="l in lists" :key="l.name" :value="l.name">
-                {{ l.list_name || l.name }}
-              </option>
-            </select>
+              <button
+                v-for="l in lists"
+                :key="l.name"
+                type="button"
+                class="flex w-full items-center justify-between border-b border-outline-gray-1 px-3 py-2.5 text-left text-sm last:border-0 hover:bg-surface-gray-2"
+                :class="saveListName === l.name ? 'bg-surface-gray-3 font-medium' : ''"
+                @click="saveListName = l.name"
+              >
+                <span>{{ l.list_name || l.name }}</span>
+                <span v-if="saveListName === l.name" class="text-xs text-ink-gray-5">Selected</span>
+              </button>
+            </div>
+            <p v-else class="text-xs text-ink-gray-5">No lists yet — use “New list”.</p>
           </div>
-          <div v-if="saveMode === 'new'">
+          <div v-else>
             <FormControl label="New list name" type="text" v-model="saveNewName"
               placeholder="e.g. Toronto Dentists" />
           </div>
@@ -231,11 +242,6 @@ const depthOptions = [
   { label: 'Thorough', value: '3' },
 ]
 
-const saveModeOptions = computed(() => {
-  const opts = [{ label: 'New list', value: 'new' }]
-  if (lists.value.length) opts.unshift({ label: 'Existing list', value: 'existing' })
-  return opts
-})
 
 // Map state
 const mapEl         = ref(null)
@@ -265,11 +271,17 @@ const saveNewName   = ref('')
 const enrichEmail   = ref(false)
 const saving        = ref(false)
 
-watch(showSaveDialog, (open) => {
+watch(showSaveDialog, async (open) => {
   if (!open) return
+  try {
+    await reloadLists()
+  } catch {
+    /* keep cached */
+  }
   saveMode.value = lists.value?.length ? 'existing' : 'new'
   saveListName.value = ''
   saveNewName.value = ''
+  enrichEmail.value = false
 })
 
 onMounted(async () => {

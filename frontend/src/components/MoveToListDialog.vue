@@ -2,34 +2,52 @@
   <Dialog v-model="show" :options="{ title, size: 'sm' }">
     <template #body-content>
       <div class="flex flex-col gap-3">
-        <!-- Mode toggle -->
         <div class="flex gap-2">
           <Button
             :variant="mode === 'existing' ? 'solid' : 'subtle'"
-            size="sm" label="Existing list" @click="mode = 'existing'" />
+            size="sm"
+            label="Existing list"
+            :disabled="!listOptions.length"
+            @click="mode = 'existing'"
+          />
           <Button
             :variant="mode === 'new' ? 'solid' : 'subtle'"
-            size="sm" label="New list" @click="mode = 'new'" />
+            size="sm"
+            label="New list"
+            @click="mode = 'new'"
+          />
         </div>
 
-        <!-- Native select works inside Dialog (frappe-ui Select z-index issue) -->
-        <select
-          v-if="mode === 'existing'"
-          v-model="targetList"
-          class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
-        >
-          <option disabled value="">Choose a list…</option>
-          <option v-for="o in listOptions" :key="o.value" :value="o.value">
-            {{ o.label }}
-          </option>
-        </select>
+        <div v-if="mode === 'existing'">
+          <div
+            v-if="listOptions.length"
+            class="max-h-48 overflow-y-auto rounded-md border border-outline-gray-2"
+          >
+            <button
+              v-for="o in listOptions"
+              :key="o.value"
+              type="button"
+              class="flex w-full items-center justify-between border-b border-outline-gray-1 px-3 py-2.5 text-left text-sm last:border-0 hover:bg-surface-gray-2"
+              :class="
+                targetList === o.value
+                  ? 'bg-surface-gray-3 font-medium text-ink-gray-9'
+                  : 'text-ink-gray-8'
+              "
+              @click="targetList = o.value"
+            >
+              <span>{{ o.label }}</span>
+              <span v-if="targetList === o.value" class="text-xs text-ink-gray-5">Selected</span>
+            </button>
+          </div>
+          <p v-else class="text-xs text-ink-gray-5">No other lists — use “New list”.</p>
+        </div>
 
-        <!-- New list name -->
         <TextInput
           v-else
           v-model="newListName"
           placeholder="New list name"
-          @keydown.enter="confirm" />
+          @keydown.enter="confirm"
+        />
       </div>
     </template>
     <template #actions="{ close }">
@@ -48,8 +66,8 @@ import { call } from '../composables/api.js'
 
 const props = defineProps({
   modelValue:  { type: Boolean, default: false },
-  names:       { type: Array,  default: () => [] },  // selected prospect names
-  lists:       { type: Array,  default: () => [] },  // [{name, list_name}]
+  names:       { type: Array,  default: () => [] },
+  lists:       { type: Array,  default: () => [] },
   currentList: { type: String, default: null },
 })
 const emit = defineEmits(['update:modelValue', 'moved'])
@@ -72,7 +90,6 @@ const listOptions = computed(() =>
     .map(l => ({ label: l.list_name || l.name, value: l.name }))
 )
 
-// Reset fields each time the dialog opens
 watch(show, (open) => {
   if (open) {
     mode.value = listOptions.value.length ? 'existing' : 'new'
