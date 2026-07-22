@@ -19,21 +19,15 @@
             autocomplete="off"
             class="form-input w-full text-sm" />
         </div>
-        <div class="flex-1 min-w-28">
+        <div class="relative z-20 flex-1 min-w-28">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</p>
-          <select
+          <SearchableSelect
             v-model="categoryValue"
-            class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
-          >
-            <option value="">Any category</option>
-            <option
-              v-for="c in categories"
-              :key="c.value || c.label"
-              :value="c.value"
-            >
-              {{ c.label }}
-            </option>
-          </select>
+            :options="categories"
+            placeholder="Any category"
+            empty-option="Any category"
+            filter-placeholder="Type to filter categories…"
+          />
         </div>
         <div class="w-24 shrink-0">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
@@ -227,6 +221,7 @@ export default { name: 'SearchPage' }
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, TextInput, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
 
