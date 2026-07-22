@@ -25,7 +25,14 @@
         </div>
         <div class="w-24 shrink-0">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
-          <Select :options="depthOptions" v-model="depth" class="w-full" />
+          <select
+            v-model="depth"
+            class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
+          >
+            <option v-for="o in depthOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </option>
+          </select>
         </div>
         <Button label="Search" variant="solid" icon-left="search" class="w-full shrink-0 sm:w-auto"
           :loading="searching" @click="search" />
@@ -196,7 +203,7 @@ export default { name: 'SearchPage' }
 <script setup>
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, TextInput, Select, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import { Button, TextInput, Autocomplete, Dialog, FormControl, Badge, toast } from 'frappe-ui'
 import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
 
