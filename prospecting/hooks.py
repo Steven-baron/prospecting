@@ -11,6 +11,9 @@ website_route_rules = [
 
 after_install = "prospecting.install.after_install"
 
+# Register the CRM chrome capability when kit is present.
+import prospecting.module  # noqa: E402, F401
+
 # Prospecting status (New / Lead / Dismissed) is intentionally decoupled from the
 # CRM deal pipeline — CRM stages stay in CRM and do not flow back to the prospect.
 
