@@ -140,10 +140,10 @@
 </template>
 
 <script setup>
+import { prospectingApi } from '@/api/prospecting'
 import { ref, computed, watch, h } from 'vue'
 import { Dialog, Button, Dropdown, FormControl, toast } from 'frappe-ui'
-import { call } from '../composables/api.js'
-import { __ } from '../translation.js'
+import { call } from '@/composables/api.js'
 
 const props = defineProps({
   doc:     { type: Object,  default: null },
@@ -265,7 +265,7 @@ async function findOwnerNames() {
   findingOwners.value = true
   const tid = toast.create({ message: __('Finding owner name…'), type: 'info', duration: 600 })
   try {
-    const r = await call('prospecting.api.find_owner_names', { prospect_names: [props.doc.name] })
+    const r = await call(prospectingApi.findOwnerNames, { prospect_names: [props.doc.name] })
     const data = r.results?.[props.doc.name]
     if (data?.owner_name) {
       props.doc.owner_name = data.owner_name
@@ -289,7 +289,7 @@ async function findEmail() {
   if (!props.doc) return
   findingEmail.value = true
   try {
-    const r = await call('prospecting.api.enrich_email', { prospect: props.doc.name })
+    const r = await call(prospectingApi.enrichEmail, { prospect: props.doc.name })
     if (r?.email) {
       props.doc.email_id = r.email
       emit('field-updated', { name: props.doc.name, key: 'email_id', value: r.email })
@@ -322,7 +322,7 @@ async function pushOneToCRM() {
   await saveNotes()
   pushingOne.value = true
   try {
-    const r = await call('prospecting.api.push_to_crm', { prospect_names: [props.doc.name] })
+    const r = await call(prospectingApi.pushToCrm, { prospect_names: [props.doc.name] })
     if (r.created) {
       toast.success(__('Lead created in CRM'))
       props.doc.status = 'Lead'

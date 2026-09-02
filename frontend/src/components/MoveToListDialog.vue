@@ -2,6 +2,7 @@
   <Dialog v-model="show" :options="{ title, size: 'sm' }">
     <template #body-content>
       <div class="flex flex-col gap-3">
+        <!-- Mode toggle — no Select menus (break inside Dialog on prod) -->
         <div class="flex gap-2">
           <Button
             :variant="mode === 'existing' ? 'solid' : 'subtle'"
@@ -60,15 +61,15 @@
 </template>
 
 <script setup>
+import { prospectingApi } from '@/api/prospecting'
 import { ref, computed, watch } from 'vue'
 import { Dialog, Button, TextInput, toast } from 'frappe-ui'
-import { call } from '../composables/api.js'
-import { __ } from '../translation.js'
+import { call } from '@/composables/api.js'
 
 const props = defineProps({
   modelValue:  { type: Boolean, default: false },
-  names:       { type: Array,  default: () => [] },
-  lists:       { type: Array,  default: () => [] },
+  names:       { type: Array,  default: () => [] },  // selected prospect names
+  lists:       { type: Array,  default: () => [] },  // [{name, list_name}]
   currentList: { type: String, default: null },
 })
 const emit = defineEmits(['update:modelValue', 'moved'])
@@ -91,6 +92,7 @@ const listOptions = computed(() =>
     .map(l => ({ label: l.list_name || l.name, value: l.name }))
 )
 
+// Reset fields each time the dialog opens
 watch(show, (open) => {
   if (open) {
     mode.value = listOptions.value.length ? 'existing' : 'new'
@@ -104,7 +106,7 @@ async function confirm() {
   if (mode.value === 'new' && !newListName.value.trim()) { toast.warning(__('Enter a list name.')); return }
   loading.value = true
   try {
-    const r = await call('prospecting.api.move_to_list', {
+    const r = await call(prospectingApi.moveToList, {
       prospect_names: props.names,
       target_list:    mode.value === 'existing' ? targetList.value : '',
       new_list_name:  mode.value === 'new' ? newListName.value.trim() : '',

@@ -21,6 +21,7 @@
         </div>
         <div class="relative z-20 flex-1 min-w-28">
           <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">{{ __('Category') }}</p>
+          <!-- Custom searchable picker (type-to-filter) — avoids frappe-ui Combobox bugs -->
           <SearchableSelect
             v-model="categoryValue"
             :options="categories"
@@ -150,7 +151,8 @@
       <SearchResultDetail :result="activeResult" @close="activeResult = null" />
     </div>
 
-    <!-- Save to List — buttons + list rows (no Select menus) -->
+    <!-- Save to List — no Select/dropdown menus (portaled menus break inside Dialog
+         and over the map). Buttons + list rows only. -->
     <Dialog v-model="showSaveDialog" :options="{ title: __('Save to Prospect List'), size: 'sm' }">
       <template #body-content>
         <div class="space-y-4 px-1">
@@ -169,7 +171,9 @@
               @click="saveMode = 'new'"
             />
           </div>
+
           <div v-if="saveMode === 'existing'">
+            <p class="mb-2 text-xs text-ink-gray-5">{{ __('Choose a list') }}</p>
             <div
               v-if="lists.length"
               class="max-h-48 overflow-y-auto rounded-md border border-outline-gray-2"
@@ -179,7 +183,11 @@
                 :key="l.name"
                 type="button"
                 class="flex w-full items-center justify-between border-b border-outline-gray-1 px-3 py-2.5 text-left text-sm last:border-0 hover:bg-surface-gray-2"
-                :class="saveListName === l.name ? 'bg-surface-gray-3 font-medium' : ''"
+                :class="
+                  saveListName === l.name
+                    ? 'bg-surface-gray-3 font-medium text-ink-gray-9'
+                    : 'text-ink-gray-8'
+                "
                 @click="saveListName = l.name"
               >
                 <span>{{ l.list_name || l.name }}</span>
@@ -188,12 +196,18 @@
             </div>
             <p v-else class="text-xs text-ink-gray-5">{{ __('No lists yet — use "New list".') }}</p>
           </div>
+
           <div v-else>
-            <FormControl :label="__('New list name')" type="text" v-model="saveNewName"
-              :placeholder="__('e.g. Toronto Dentists')" />
+            <FormControl
+              :label="__('New list name')"
+              type="text"
+              v-model="saveNewName"
+              :placeholder="__('e.g. Toronto Dentists')"
+            />
           </div>
-          <label class="flex items-center gap-2 cursor-pointer text-sm text-ink-gray-7">
-            <input type="checkbox" v-model="enrichEmail" class="form-checkbox">
+
+          <label class="flex cursor-pointer items-center gap-2 text-sm text-ink-gray-7">
+            <input v-model="enrichEmail" type="checkbox" class="form-checkbox" />
             {{ __('Try to find emails from websites (slower)') }}
           </label>
         </div>
@@ -201,8 +215,12 @@
       <template #actions>
         <div class="flex justify-end gap-2">
           <Button :label="__('Cancel')" variant="subtle" @click="showSaveDialog = false" />
-          <Button :label="__('Save {0} prospects', [selected.size])" variant="solid"
-            :loading="saving" @click="save" />
+          <Button
+            :label="__('Save {0} prospects', [selected.size])"
+            variant="solid"
+            :loading="saving"
+            @click="save"
+          />
         </div>
       </template>
     </Dialog>
@@ -211,6 +229,7 @@
 </template>
 
 <script>
+import { prospectingApi } from '@/api/prospecting'
 // Named so <keep-alive include="SearchPage"> can cache it (preserves search
 // state when navigating away to a list and back).
 export default { name: 'SearchPage' }
@@ -220,10 +239,9 @@ export default { name: 'SearchPage' }
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, TextInput, Dialog, FormControl, Badge, toast } from 'frappe-ui'
-import { __ } from '../translation.js'
-import SearchableSelect from '../components/SearchableSelect.vue'
-import SearchResultDetail from '../components/SearchResultDetail.vue'
-import { call } from '../composables/api.js'
+import SearchResultDetail from '@/components/prospecting/SearchResultDetail.vue'
+import SearchableSelect from '@/components/prospecting/SearchableSelect.vue'
+import { call } from '@/composables/api.js'
 
 // Mobile-only view toggle between the results list and the map
 const mobileView = ref('list')
@@ -235,7 +253,7 @@ const reloadLists = inject('reloadLists', () => {})
 // Search state
 const what      = ref('')
 const whereText = ref('')
-const categoryValue = ref('')
+const categoryValue = ref('')   // Google place type string, or '' for any
 const depth     = ref('2')
 const categories = ref([])
 const results    = ref([])
@@ -278,12 +296,13 @@ const saveNewName   = ref('')
 const enrichEmail   = ref(false)
 const saving        = ref(false)
 
+// Prefer existing list only when the sidebar already has lists; otherwise New list.
 watch(showSaveDialog, async (open) => {
   if (!open) return
   try {
     await reloadLists()
   } catch {
-    /* keep cached */
+    /* keep cached lists */
   }
   saveMode.value = lists.value?.length ? 'existing' : 'new'
   saveListName.value = ''
@@ -292,12 +311,13 @@ watch(showSaveDialog, async (open) => {
 })
 
 onMounted(async () => {
-  const r = await call('prospecting.api.get_place_categories')
+  const r = await call(prospectingApi.getPlaceCategories)
+  // Skip empty-value "Any category" rows — we render that as a fixed <option>
   categories.value = (r || [])
     .map(c => ({ label: c.label, value: c.value ?? '' }))
     .filter(c => c.label && c.value !== '')
 
-  const kr  = await call('prospecting.api.get_maps_api_key')
+  const kr  = await call(prospectingApi.getMapsApiKey)
   const key = (kr || '').trim()
   if (!key) return
   await loadMapsScript(key)
@@ -444,7 +464,7 @@ async function search() {
   activeResult.value  = null
   clearMarkers()
   try {
-    const r = await call('prospecting.api.search_places', {
+    const r = await call(prospectingApi.searchPlaces, {
       query, included_type: categoryValue.value || '',
       max_pages: parseInt(depth.value),
       bounds: bounds_arg,
@@ -485,7 +505,7 @@ async function save() {
 
   saving.value = true
   try {
-    const r = await call('prospecting.api.import_prospects', {
+    const r = await call(prospectingApi.importProspects, {
       prospects: JSON.stringify(chosen),
       list_name, new_list_name: new_name, enrich_email: enrichEmail.value ? 1 : 0,
     })
@@ -498,7 +518,7 @@ async function save() {
     selected.value       = new Set()
     await reloadLists()
     const target = list_name || r.list_name
-    if (target) router.push(`/list/${encodeURIComponent(target)}`)
+    if (target) router.push(`/prospecting/list/${encodeURIComponent(target)}`)
   } catch (e) {
     toast.error(__('Save failed: {0}', [e.message]))
   } finally {

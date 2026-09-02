@@ -173,10 +173,10 @@
 </template>
 
 <script setup>
+import { prospectingApi } from '@/api/prospecting'
 import { ref, computed, onMounted } from 'vue'
 import { Button, Dialog, toast } from 'frappe-ui'
-import { call } from '../composables/api.js'
-import { __ } from '../translation.js'
+import { call } from '@/composables/api.js'
 
 const AI_MODELS = [
   { value: 'opencode-go/deepseek-v4-flash', label: __('DeepSeek V4 Flash — fast & economical') },
@@ -232,8 +232,8 @@ const someVisibleSelected  = computed(() => !allVisibleSelected.value && filtere
 
 onMounted(async () => {
   const [apiSettings, rows] = await Promise.all([
-    call('prospecting.api.get_api_settings'),
-    call('prospecting.api.get_all_categories'),
+    call(prospectingApi.getApiSettings),
+    call(prospectingApi.getAllCategories),
   ])
   if (apiSettings) Object.assign(keys.value, apiSettings)
   categories.value = (rows || []).map(r => ({ ...r, _key: _key++ }))
@@ -242,7 +242,7 @@ onMounted(async () => {
 async function saveKeys() {
   savingKeys.value = true
   try {
-    await call('prospecting.api.save_api_settings', { ...keys.value })
+    await call(prospectingApi.saveApiSettings, { ...keys.value })
     toast.success(__('Settings saved'))
   } catch (e) {
     toast.error(e.message)
@@ -289,7 +289,7 @@ async function save() {
     .map(({ label, value, active }) => ({ label, value, active }))
   saving.value = true
   try {
-    await call('prospecting.api.save_categories', { categories: payload })
+    await call(prospectingApi.saveCategories, { categories: payload })
     toast.success(__('Saved'))
   } catch (e) {
     toast.error(e.message)

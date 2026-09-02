@@ -76,7 +76,6 @@
 <script setup>
 import { computed } from 'vue'
 import { Button, Dropdown } from 'frappe-ui'
-import { __ } from '../translation.js'
 
 const props = defineProps({
   prospects:   { type: Array,    default: () => [] },

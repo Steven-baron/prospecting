@@ -14,14 +14,14 @@
         <Button v-if="listName" :label="__('Delete list')" variant="subtle"
           class="text-ink-red-3" @click="confirmDeleteList" />
         <Button :label="__('Find Prospects')" variant="solid" icon-left="search"
-          @click="router.push('/search')" />
+          @click="router.push('/prospecting/search')" />
       </div>
 
       <!-- Mobile actions: icon buttons + overflow -->
       <div class="flex sm:hidden flex-shrink-0 items-center gap-1">
         <Button variant="subtle" :icon="showMap ? 'list' : 'map'"
           :label="undefined" @click="toggleMap" />
-        <Button variant="solid" icon="search" @click="router.push('/search')" />
+        <Button variant="solid" icon="search" @click="router.push('/prospecting/search')" />
         <Dropdown v-if="listName" :options="[
           { label: __('Delete list'), icon: 'trash-2', theme: 'red', onClick: confirmDeleteList },
         ]" placement="bottom-end">
@@ -63,7 +63,7 @@
 
         <!-- Mobile: card list -->
         <ProspectCardList v-if="isMobile && (prospects.length || loading)"
-          v-model="selectedRows"
+          v-model="selectedSet"
           :prospects="prospects"
           :statuses="STATUSES"
           :status-color="statusColor"
@@ -72,78 +72,31 @@
           @open="openDetail"
           @update-status="e => updateStatus(e.name, e.status)" />
 
-        <!-- Desktop: dense table -->
-        <ListView v-else-if="prospects.length || loading"
-          ref="listViewRef"
-          :columns="columns"
-          :rows="prospects"
+        <!-- Desktop: kit CollectionTable (sheet = prospecting grid) -->
+        <CollectionTable
+          v-else-if="prospects.length || loading"
+          class="min-h-0"
+          variant="sheet"
+          :columns="kitColumns"
+          :rows="kitRows"
           row-key="name"
-          :options="{
-            onRowClick: handleRowClick,
-            showTooltip: false,
-            selectable: true,
-            enableActive: true,
-            rowHeight: 40,
-            emptyState: { title: __('No prospects'), description: '' },
-          }"
-          @update:selections="sel => (selectedRows = sel)">
-
-          <template #default="{ selectable }">
-            <ListHeader />
-            <ListRows v-if="prospects.length" />
-            <ListEmptyState v-else />
-            <ListSelectBanner v-if="selectable">
-              <template #actions="{ selections, unselectAll }">
-                <Dropdown :options="bulkActions([...selections], unselectAll)">
-                  <Button variant="ghost" icon="more-horizontal" />
-                </Dropdown>
-              </template>
-            </ListSelectBanner>
+          :loading="loading"
+          :show-toolbar="false"
+          :show-column-picker="false"
+          show-peek
+          :row-actions="kitRowActions"
+          :on-row-click="handleRowClick"
+          v-model:selections="selectedIds"
+          v-model:active-cell="activeCell"
+          @peek="onPeek"
+          @row-action="onKitRowAction"
+        >
+          <template #selection-actions="{ selected, clear }">
+            <Dropdown :options="bulkActions(selected, clear)">
+              <Button variant="ghost" :label="__('Actions')" />
+            </Dropdown>
           </template>
-
-          <template #cell="{ column, row, item }">
-            <div v-if="column.key === 'status'" @click.stop>
-              <Dropdown :options="STATUSES.map(s => ({ label: statusLabel(s), onClick: () => updateStatus(row.name, s) }))">
-                <button class="flex items-center gap-1.5 rounded px-1.5 py-1 text-sm text-ink-gray-7 hover:bg-surface-gray-2">
-                  <span :class="['size-2 rounded-full', statusColor(item)]" />
-                  {{ statusLabel(item) }}
-                </button>
-              </Dropdown>
-            </div>
-            <a v-else-if="column.key === 'crm_lead' && item" :href="`/crm/leads/${item}`" target="_blank"
-              rel="noreferrer" @click.stop :title="__('Open in CRM')"
-              class="inline-flex items-center gap-1 text-sm font-medium text-ink-green-3 hover:underline">
-              <span class="size-2 rounded-full bg-green-500" /> {{ __('In CRM') }}
-            </a>
-            <span v-else-if="column.key === 'crm_lead'" class="text-sm text-ink-gray-4">—</span>
-            <span v-else-if="column.key === 'rating'" class="text-amber-500 text-sm">
-              {{ item != null ? `★ ${Number(item).toFixed(1)}` : '—' }}
-            </span>
-            <a v-else-if="column.key === 'email_id' && item" :href="`mailto:${item}`" @click.stop
-              class="truncate text-sm text-ink-blue-2">{{ item }}</a>
-            <a v-else-if="column.key === 'website' && item" :href="item" target="_blank" rel="noreferrer" @click.stop
-              class="truncate text-sm text-ink-blue-2">{{ item.replace(/^https?:\/\/(www\.)?/, '') }}</a>
-            <div v-else-if="column.key === '_actions'" class="flex justify-end items-center gap-0.5" @click.stop>
-              <button @click="openDetail(row.name)"
-                class="rounded p-1 text-ink-gray-3 hover:bg-surface-gray-2 hover:text-ink-gray-7"
-                :title="__('View details')">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              </button>
-              <Dropdown :options="rowMenuOptions(row)" placement="right">
-                <template #default="{ open }">
-                  <Button
-                    icon="more-horizontal"
-                    variant="ghost"
-                    size="sm"
-                    :class="open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'" />
-                </template>
-              </Dropdown>
-            </div>
-            <span v-else class="truncate text-sm">{{ item ?? '—' }}</span>
-          </template>
-
-        </ListView>
+        </CollectionTable>
 
         <!-- Empty state -->
         <div v-if="!loading && !prospects.length"
@@ -151,7 +104,7 @@
           <div class="text-4xl opacity-40">👥</div>
           <p class="font-medium text-ink-gray-7">{{ __('No prospects yet') }}</p>
           <p class="text-sm">{{ __('Use Find Prospects to search for businesses.') }}</p>
-          <Button :label="__('Find Prospects')" variant="solid" @click="router.push('/search')" />
+          <Button :label="__('Find Prospects')" variant="solid" @click="router.push('/prospecting/search')" />
         </div>
 
         <!-- Load more -->
@@ -204,21 +157,26 @@
 </template>
 
 <script setup>
+import { prospectingApi } from '@/api/prospecting'
 import { ref, computed, watch, inject, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { Select, TextInput } from 'frappe-ui'
 import {
-  ListView, ListHeader, ListRows, ListEmptyState, ListSelectBanner,
-  Button, Badge, Dropdown, Select, TextInput, Dialog, toast,
-} from 'frappe-ui'
-import ProspectDetail from '../components/ProspectDetail.vue'
-import ProspectCardList from '../components/ProspectCardList.vue'
-import FilterControl from '../components/FilterControl.vue'
-import SortControl from '../components/SortControl.vue'
-import ColumnSettings from '../components/ColumnSettings.vue'
-import MoveToListDialog from '../components/MoveToListDialog.vue'
-import { call } from '../composables/api.js'
-import { useIsMobile } from '../composables/breakpoint.js'
-import { __ } from '../translation.js'
+  Badge,
+  Button,
+  CollectionTable,
+  Dialog,
+  Dropdown,
+  toast,
+} from '@/kit'
+import ProspectDetail from '@/components/prospecting/ProspectDetail.vue'
+import ProspectCardList from '@/components/prospecting/ProspectCardList.vue'
+import FilterControl from '@/components/prospecting/FilterControl.vue'
+import SortControl from '@/components/prospecting/SortControl.vue'
+import ColumnSettings from '@/components/prospecting/ColumnSettings.vue'
+import MoveToListDialog from '@/components/prospecting/MoveToListDialog.vue'
+import { call } from '@/composables/api.js'
+import { useIsMobile } from '@/composables/breakpoint.js'
 
 const isMobile = useIsMobile()
 
@@ -246,8 +204,7 @@ const confirmActions = computed(() => [{
   onClick: (close) => { close(); const cb = confirmCb; confirmCb = null; cb?.() },
 }])
 
-// Full catalog of selectable columns (Business Name is pinned first; actions
-// are appended automatically and not user-managed).
+// Full catalog of selectable columns (Business Name is pinned first).
 const COLUMN_CATALOG = [
   { label: __('Business Name'), key: 'prospect_name',  width: '220px' },
   { label: __('Category'),      key: 'category',        width: '130px' },
@@ -267,22 +224,83 @@ const COLUMN_CATALOG = [
 const DEFAULT_COLUMN_KEYS = [
   'prospect_name', 'category', 'territory', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status', 'crm_lead',
 ]
-const ACTIONS_COL = { label: '', key: '_actions', width: '60px' }
-
 const MAP_COLUMNS = [
   { label: __('Business Name'), key: 'prospect_name', width: '200px' },
   { label: __('Rating'),        key: 'rating',        width: '70px'  },
   { label: __('Status'),        key: 'status',        width: '120px' },
-  ACTIONS_COL,
 ]
 
-// User-managed active columns (set by ColumnSettings via @update), + actions appended.
+const COL_TYPE = {
+  prospect_name: 'identity',
+  category: 'text',
+  owner_name: 'person',
+  _address_short: 'text',
+  mobile_no: 'phone',
+  email_id: 'email',
+  website: 'url',
+  rating: 'number',
+  review_count: 'number',
+  source: 'text',
+  territory: 'location',
+  next_follow_up: 'date',
+  status: 'status',
+  crm_lead: 'status',
+}
+
 const activeColumns = ref(DEFAULT_COLUMN_KEYS.map(k => COLUMN_CATALOG.find(c => c.key === k)).filter(Boolean))
 
-const columns = computed(() => {
-  if (showMap.value) return MAP_COLUMNS
-  return [...activeColumns.value, ACTIONS_COL]
+function kitCol(col) {
+  return {
+    key: col.key,
+    label: col.label,
+    type: COL_TYPE[col.key] || 'text',
+    width: parseInt(String(col.width), 10) || 160,
+  }
+}
+
+const kitColumns = computed(() => {
+  const src = showMap.value ? MAP_COLUMNS : activeColumns.value
+  return src.map(kitCol)
 })
+
+const STATUS_DOT = { New: 'gray', Lead: 'green', Dismissed: 'red' }
+function statusLabel(s) {
+  if (s === 'Lead') return __('Lead')
+  if (s === 'Dismissed') return __('Dismissed')
+  return __('New')
+}
+
+const kitRows = computed(() =>
+  prospects.value.map((p) => ({
+    ...p,
+    prospect_name: { label: p.prospect_name || '' },
+    owner_name: p.owner_name ? { label: p.owner_name } : '',
+    status: { label: statusLabel(p.status), color: STATUS_DOT[p.status] || 'gray' },
+    crm_lead: p.crm_lead ? { label: __('In CRM'), color: 'green' } : '',
+  })),
+)
+
+const kitRowActions = [
+  { id: 'push', label: __('Push to CRM'), icon: 'open' },
+  { id: 'dismiss', label: __('Dismiss'), icon: 'eye' },
+]
+
+function onPeek(row) {
+  if (row?.name) openDetail(row.name)
+}
+
+function onKitRowAction({ id, row }) {
+  if (!row?.name) return
+  if (id === 'push') {
+    doPushToCRM([row.name], null)
+    return
+  }
+  if (id === 'dismiss') {
+    const status = row.status?.label || row.status
+    if (status === 'Dismissed') doRestore([row.name], null)
+    else doDismiss([row.name], null)
+  }
+}
 
 function onColumnsUpdate(cols) { activeColumns.value = cols }
 
@@ -343,7 +361,14 @@ const loading      = ref(false)
 const hasMore      = ref(false)
 const start        = ref(0)
 const openDoc      = ref(null)
-const selectedRows = ref(new Set())
+const selectedIds = ref([])
+const selectedSet = computed({
+  get: () => new Set(selectedIds.value),
+  set: (next) => {
+    selectedIds.value = next instanceof Set ? [...next] : [...(next || [])]
+  },
+})
+const activeCell = ref(null)
 const removing      = ref(false)
 const pushing       = ref(false)
 const findingOwners = ref(false)
@@ -379,11 +404,6 @@ const pageTitle = computed(() => {
 
 const STATUS_COLORS = { New: 'bg-gray-400', Lead: 'bg-green-500', Dismissed: 'bg-red-400' }
 function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
-function statusLabel(s) {
-  if (s === 'Lead') return __('Lead')
-  if (s === 'Dismissed') return __('Dismissed')
-  return __('New')
-}
 
 function bulkActions(names, unselectAll) {
   const opts = []
@@ -433,7 +453,7 @@ function loadMapsScript(key) {
 
 async function ensureMapReady() {
   if (!window.google?.maps) {
-    const kr  = await call('prospecting.api.get_maps_api_key')
+    const kr  = await call(prospectingApi.getMapsApiKey)
     const key = (kr || '').trim()
     if (!key) { toast.error(__('Google Maps API key not configured.')); return }
     await loadMapsScript(key)
@@ -522,7 +542,8 @@ async function reload() {
   start.value        = 0
   hasMore.value      = false
   openDoc.value      = null
-  selectedRows.value = new Set()
+  selectedIds.value = []
+  activeCell.value = null
   await loadPage(true)
 }
 
@@ -570,20 +591,14 @@ async function loadPage(reset) {
   }
 }
 
-const listViewRef = ref(null)
-
-// Set the ListView's highlighted (active) row. activeRow isn't exposed, but the
-// ListView provides it via provide('list', ...) — reach it through the instance.
 function setActiveRow(name) {
-  const provided = listViewRef.value?.$?.provides?.list
-  if (provided?.value?.activeRow) provided.value.activeRow.value = name
+  if (!name) return
+  activeCell.value = { rowId: name, columnId: 'prospect_name' }
 }
 
 async function openDetail(name) {
   const r = await call('frappe.client.get', { doctype: 'Prospect', name })
   openDoc.value = r
-  // Keep the list highlight on whatever the modal is showing (follows prev/next,
-  // and persists after close so the last-viewed row stays selected).
   setActiveRow(name)
 }
 
@@ -594,7 +609,7 @@ const hasPrevDetail = computed(() => openIndex.value > 0)
 const hasNextDetail = computed(() => openIndex.value >= 0 && openIndex.value < prospects.value.length - 1)
 async function goPrevDetail() { if (hasPrevDetail.value) await openDetail(prospects.value[openIndex.value - 1].name) }
 async function goNextDetail() { if (hasNextDetail.value) await openDetail(prospects.value[openIndex.value + 1].name) }
-function goToList(listName) { if (listName) { openDoc.value = null; router.push(`/list/${listName}`) } }
+function goToList(listName) { if (listName) { openDoc.value = null; router.push(`/prospecting/list/${listName}`) } }
 
 // Run an action on the current prospect, drop it from the active view, then
 // advance the modal to the next row (or close if it was the last). Updates the
@@ -618,7 +633,7 @@ async function modalActionAdvance(name, apiFn, successMsg) {
 
 function deleteFromModal(name) {
   modalActionAdvance(name,
-    () => call('prospecting.api.delete_prospects', { prospect_names: [name] }), __('Deleted'))
+    () => call(prospectingApi.deleteProspects, { prospect_names: [name] }), __('Deleted'))
 }
 
 // ⋯ menu actions dispatched from the detail modal
@@ -627,13 +642,13 @@ function onModalAction(type) {
   if (!name) return
   if (type === 'dismiss') {
     modalActionAdvance(name,
-      () => call('prospecting.api.dismiss_prospects', { prospect_names: [name] }), __('Dismissed'))
+      () => call(prospectingApi.dismissProspects, { prospect_names: [name] }), __('Dismissed'))
   } else if (type === 'remove') {
     modalActionAdvance(name,
-      () => call('prospecting.api.remove_from_list', { prospect_names: [name] }), __('Removed from list'))
+      () => call(prospectingApi.removeFromList, { prospect_names: [name] }), __('Removed from list'))
   } else if (type === 'restore') {
     // restore keeps the modal on the same prospect (just flips status)
-    call('prospecting.api.restore_prospects', { prospect_names: [name] }).then(() => {
+    call(prospectingApi.restoreProspects, { prospect_names: [name] }).then(() => {
       if (openDoc.value?.name === name) openDoc.value.status = 'New'
       onStatusUpdated({ name, status: 'New' })
       toast.success(__('Restored'))
@@ -694,7 +709,7 @@ async function doRemoveFromList(names, unselectAll) {
   if (!names.length) return
   removing.value = true
   try {
-    const r = await call('prospecting.api.remove_from_list', { prospect_names: names })
+    const r = await call(prospectingApi.removeFromList, { prospect_names: names })
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
     unselectAll?.()
     toast.success(__('Removed {0} prospect(s) from list', [r.removed]))
@@ -717,7 +732,7 @@ function doDeleteBulk(names, unselectAll) {
   }, async () => {
     deleting.value = true
     try {
-      const r = await call('prospecting.api.delete_prospects', { prospect_names: names })
+      const r = await call(prospectingApi.deleteProspects, { prospect_names: names })
       if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
       unselectAll?.()
       toast.success(__('Deleted {0} prospect(s)', [r.deleted]))
@@ -735,7 +750,7 @@ async function doDismiss(names, unselectAll) {
   if (!names.length) return
   dismissing.value = true
   try {
-    const r = await call('prospecting.api.dismiss_prospects', { prospect_names: names })
+    const r = await call(prospectingApi.dismissProspects, { prospect_names: names })
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
     unselectAll?.()
     toast.success(__('Dismissed {0} prospect(s)', [r.dismissed]))
@@ -752,7 +767,7 @@ async function doRestore(names, unselectAll) {
   if (!names.length) return
   restoring.value = true
   try {
-    const r = await call('prospecting.api.restore_prospects', { prospect_names: names })
+    const r = await call(prospectingApi.restoreProspects, { prospect_names: names })
     unselectAll?.()
     toast.success(__('Restored {0} prospect(s)', [r.restored]))
     await reload()
@@ -772,7 +787,7 @@ async function doPushToCRM(names, unselectAll) {
     type: 'info', duration: 600,
   })
   try {
-    const r = await call('prospecting.api.push_to_crm', { prospect_names: names })
+    const r = await call(prospectingApi.pushToCrm, { prospect_names: names })
     const parts = []
     if (r.created)        parts.push(__('{0} lead(s) created', [r.created]))
     if (r.skipped)        parts.push(__('{0} already exist', [r.skipped]))
@@ -796,7 +811,7 @@ async function doFindOwnerNames(names, unselectAll) {
     type: 'info', duration: 600,
   })
   try {
-    const r = await call('prospecting.api.find_owner_names', { prospect_names: names })
+    const r = await call(prospectingApi.findOwnerNames, { prospect_names: names })
     let found = 0
     for (const [pname, data] of Object.entries(r.results || {})) {
       if (data.owner_name) {
@@ -841,10 +856,10 @@ function confirmDeleteList() {
     confirmLabel: __('Delete list'),
     danger: true,
   }, async () => {
-    await call('prospecting.api.delete_list', { list_name: props.listName })
+    await call(prospectingApi.deleteList, { list_name: props.listName })
     toast.success(__('List "{0}" deleted', [label]))
     await reloadLists()
-    router.push('/all')
+    router.push('/prospecting')
   })
 }
 </script>

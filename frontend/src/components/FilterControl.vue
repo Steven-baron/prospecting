@@ -66,7 +66,6 @@
 <script setup>
 import { computed } from 'vue'
 import { Button, Popover, Autocomplete, FormControl } from 'frappe-ui'
-import { __ } from '../translation.js'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },

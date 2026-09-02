@@ -1,12 +1,13 @@
 <template>
   <Sidebar :sections="navSections" v-model:collapsed="collapsed" :disable-collapse="disableCollapse">
     <template #header>
+      <!-- Legacy sidebar — ModuleSidebar is the live CRM nav now. Kept for reference. -->
       <div class="flex h-12 items-center gap-2 px-2 py-1">
-        <div class="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-purple-600 text-sm text-white font-semibold">
-          P
+        <div class="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-surface-gray-7 text-sm font-semibold text-ink-white">
+          <LucideUsers class="size-4" />
         </div>
-        <span v-if="!collapsed" class="text-base font-semibold text-ink-gray-9 transition-all duration-300">
-          {{ __('Prospecting') }}
+        <span v-if="!collapsed" class="text-base font-semibold text-ink-gray-9">
+          {{ __('CRM') }}
         </span>
       </div>
     </template>
@@ -39,19 +40,9 @@
           <LucidePlus class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
-      <SidebarItem :label="__('Settings')" :isCollapsed="isCollapsed" to="/settings" :isActive="route.path === '/settings'">
+      <SidebarItem :label="__('Settings')" :isCollapsed="isCollapsed" to="/prospecting/settings" :isActive="route.path === '/prospecting/settings'">
         <template #icon>
           <LucideSettings class="size-4 text-ink-gray-6" />
-        </template>
-      </SidebarItem>
-      <SidebarItem :label="__('Home')" :isCollapsed="isCollapsed" :onClick="goHome">
-        <template #icon>
-          <LucideHome class="size-4 text-ink-gray-6" />
-        </template>
-      </SidebarItem>
-      <SidebarItem :label="__('Desk')" :isCollapsed="isCollapsed" :onClick="goDesk">
-        <template #icon>
-          <LucideLayoutDashboard class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
     </template>
@@ -62,12 +53,9 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Sidebar, SidebarItem } from 'frappe-ui'
-import { __ } from '../translation.js'
 import LucideSearch from '~icons/lucide/search'
 import LucideUsers from '~icons/lucide/users'
 import LucidePlus from '~icons/lucide/plus'
-import LucideHome from '~icons/lucide/home'
-import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucideSettings from '~icons/lucide/settings'
 
 const props = defineProps({
@@ -82,8 +70,6 @@ const emit = defineEmits(['create-list'])
 const route    = useRoute()
 const collapsed = ref(false)
 
-function goHome() { location.href = '/apps' }
-function goDesk() { location.href = '/desk' }
 
 const navSections = computed(() => [
   {
@@ -92,14 +78,14 @@ const navSections = computed(() => [
       {
         label: __('Find Prospects'),
         _icon: LucideSearch,
-        to: '/search',
-        isActive: route.path === '/search',
+        to: '/prospecting/search',
+        isActive: route.path === '/prospecting/search',
       },
       {
         label: __('All Prospects'),
         _icon: LucideUsers,
-        to: '/all',
-        isActive: route.path === '/all',
+        to: '/prospecting',
+        isActive: route.path === '/prospecting',
         suffix: String(props.totalCount || 0),
       },
     ],
@@ -108,7 +94,7 @@ const navSections = computed(() => [
     label: __('Lists'),
     items: props.lists.map(l => ({
       label:     l.list_name,
-      to:        `/list/${encodeURIComponent(l.name)}`,
+      to:        `/prospecting/list/${encodeURIComponent(l.name)}`,
       isActive:  route.params.name === l.name,
       suffix:    String(l._count || 0),
       _dotColor: l.color || '#6366f1',
