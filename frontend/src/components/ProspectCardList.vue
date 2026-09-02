@@ -10,7 +10,7 @@
         class="form-checkbox cursor-pointer"
         @click.stop="toggleSelectAll" />
       <span class="select-none text-xs text-ink-gray-5">
-        {{ selected.size ? `${selected.size} selected` : 'Select all' }}
+        {{ selected.size ? __('{0} selected', [selected.size]) : __('Select all') }}
       </span>
     </div>
 
@@ -40,17 +40,17 @@
 
           <!-- Quick contact actions -->
           <div v-if="p.mobile_no || p.email_id || p.website" class="mt-1.5 flex flex-wrap gap-3" @click.stop>
-            <a v-if="p.mobile_no" :href="`tel:${p.mobile_no}`" class="text-xs text-ink-blue-2">Call</a>
-            <a v-if="p.email_id" :href="`mailto:${p.email_id}`" class="text-xs text-ink-blue-2">Email</a>
-            <a v-if="p.website" :href="p.website" target="_blank" rel="noreferrer" class="text-xs text-ink-blue-2">Website</a>
+            <a v-if="p.mobile_no" :href="`tel:${p.mobile_no}`" class="text-xs text-ink-blue-2">{{ __('Call') }}</a>
+            <a v-if="p.email_id" :href="`mailto:${p.email_id}`" class="text-xs text-ink-blue-2">{{ __('Email') }}</a>
+            <a v-if="p.website" :href="p.website" target="_blank" rel="noreferrer" class="text-xs text-ink-blue-2">{{ __('Website') }}</a>
           </div>
 
           <!-- Status pill + overflow menu -->
           <div class="mt-2 flex items-center gap-2" @click.stop>
-            <Dropdown :options="statuses.map(s => ({ label: s, onClick: () => emit('update-status', { name: p.name, status: s }) }))">
+            <Dropdown :options="statuses.map(s => ({ label: statusLabel(s), onClick: () => emit('update-status', { name: p.name, status: s }) }))">
               <button class="flex items-center gap-1.5 rounded px-1.5 py-1 text-xs text-ink-gray-7 hover:bg-surface-gray-2">
                 <span :class="['size-2 rounded-full', statusColor(p.status)]" />
-                {{ p.status || 'New' }}
+                {{ statusLabel(p.status) }}
               </button>
             </Dropdown>
             <Dropdown class="ml-auto" :options="rowMenu(p)" placement="bottom-end">
@@ -64,10 +64,10 @@
     <!-- Bulk action bar -->
     <div v-if="selected.size"
       class="flex flex-shrink-0 items-center gap-2 border-t bg-surface-white px-4 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-      <span class="text-sm font-medium text-ink-gray-8">{{ selected.size }} selected</span>
-      <Button variant="subtle" size="sm" label="Clear" class="ml-auto" @click="clearSelection" />
+      <span class="text-sm font-medium text-ink-gray-8">{{ __('{0} selected', [selected.size]) }}</span>
+      <Button variant="subtle" size="sm" :label="__('Clear')" class="ml-auto" @click="clearSelection" />
       <Dropdown :options="bulkActions([...selected], clearSelection)" placement="top-end">
-        <Button variant="solid" size="sm" label="Actions" icon-right="chevron-down" />
+        <Button variant="solid" size="sm" :label="__('Actions')" icon-right="chevron-down" />
       </Dropdown>
     </div>
   </div>
@@ -76,6 +76,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Button, Dropdown } from 'frappe-ui'
+import { __ } from '../translation.js'
 
 const props = defineProps({
   prospects:   { type: Array,    default: () => [] },
@@ -101,4 +102,9 @@ function toggleSelectAll() {
   setSelected(allSelected.value ? new Set() : new Set(props.prospects.map(p => p.name)))
 }
 function clearSelection() { setSelected(new Set()) }
+function statusLabel(s) {
+  if (s === 'Lead') return __('Lead')
+  if (s === 'Dismissed') return __('Dismissed')
+  return __('New')
+}
 </script>

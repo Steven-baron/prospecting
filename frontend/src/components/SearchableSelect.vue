@@ -8,7 +8,7 @@
       @click="toggle"
     >
       <span class="truncate" :class="displayLabel ? 'text-ink-gray-8' : 'text-ink-gray-4'">
-        {{ displayLabel || placeholder }}
+        {{ displayLabel || placeholder || __('Select…') }}
       </span>
       <svg
         class="size-4 shrink-0 text-ink-gray-5 transition-transform"
@@ -32,7 +32,7 @@
           v-model="query"
           type="text"
           class="form-input w-full rounded border border-outline-gray-2 px-2 py-1.5 text-sm"
-          :placeholder="filterPlaceholder"
+          :placeholder="filterPlaceholder || __('Type to filter…')"
           @keydown.esc.prevent="close"
           @keydown.enter.prevent="pickFirst"
           @keydown.down.prevent="highlightNext(1)"
@@ -65,7 +65,7 @@
           </button>
         </li>
         <li v-if="!filtered.length" class="px-3 py-2 text-sm text-ink-gray-5">
-          No matches for “{{ query }}”
+          {{ __('No matches for "{0}"', [query]) }}
         </li>
       </ul>
     </div>
@@ -78,8 +78,8 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps({
   modelValue: { type: String, default: '' },
   options: { type: Array, default: () => [] }, // [{ label, value }]
-  placeholder: { type: String, default: 'Select…' },
-  filterPlaceholder: { type: String, default: 'Type to filter…' },
+  placeholder: { type: String, default: '' },
+  filterPlaceholder: { type: String, default: '' },
   /** Label for the empty-value option (e.g. "Any category"). Omit to hide. */
   emptyOption: { type: String, default: '' },
 })

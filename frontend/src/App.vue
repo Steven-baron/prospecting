@@ -25,7 +25,7 @@
         <div v-if="isMobile"
           class="flex h-12 flex-shrink-0 items-center gap-2 border-b bg-surface-white px-2">
           <button class="-ml-0.5 rounded p-2 text-ink-gray-7 hover:bg-surface-gray-2"
-            aria-label="Open menu" @click="drawerOpen = true">
+            :aria-label="__('Open menu')" @click="drawerOpen = true">
             <LucideMenu class="size-5" />
           </button>
           <span class="truncate text-base font-semibold text-ink-gray-9">{{ mobileTitle }}</span>
@@ -39,13 +39,13 @@
       </main>
 
       <!-- New List dialog -->
-      <Dialog v-model="showCreateList" :options="{ title: 'New Prospect List', size: 'sm' }">
+      <Dialog v-model="showCreateList" :options="{ title: __('New Prospect List'), size: 'sm' }">
         <template #body-content>
           <div class="space-y-4 px-1">
-            <FormControl label="List name" type="text" v-model="newListName"
-              placeholder="e.g. Toronto Dentists" autofocus @keydown.enter="createList" />
+            <FormControl :label="__('List name')" type="text" v-model="newListName"
+              :placeholder="__('e.g. Toronto Dentists')" autofocus @keydown.enter="createList" />
             <div>
-              <p class="mb-2 text-sm text-ink-gray-6">Color</p>
+              <p class="mb-2 text-sm text-ink-gray-6">{{ __('Color') }}</p>
               <div class="flex gap-2 flex-wrap">
                 <button
                   v-for="c in COLORS" :key="c"
@@ -58,8 +58,8 @@
         </template>
         <template #actions>
           <div class="flex justify-end gap-2">
-            <Button label="Cancel" variant="subtle" @click="showCreateList = false" />
-            <Button label="Create" variant="solid" :loading="creatingList" @click="createList" />
+            <Button :label="__('Cancel')" variant="subtle" @click="showCreateList = false" />
+            <Button :label="__('Create')" variant="solid" :loading="creatingList" @click="createList" />
           </div>
         </template>
       </Dialog>
@@ -76,6 +76,7 @@ import LucideMenu from '~icons/lucide/menu'
 import AppSidebar from './components/AppSidebar.vue'
 import { call } from './composables/api.js'
 import { useIsMobile } from './composables/breakpoint.js'
+import { __ } from './translation.js'
 
 const router = useRouter()
 const route  = useRoute()
@@ -92,13 +93,13 @@ const totalCount = ref(0)
 // Title shown in the mobile top bar, derived from the current route
 const mobileTitle = computed(() => {
   const p = route.path
-  if (p === '/search')   return 'Find Prospects'
-  if (p === '/settings') return 'Settings'
+  if (p === '/search')   return __('Find Prospects')
+  if (p === '/settings') return __('Settings')
   if (p.startsWith('/list/')) {
     const name = decodeURIComponent(route.params.name || '')
-    return lists.value.find(l => l.name === name)?.list_name || 'List'
+    return lists.value.find(l => l.name === name)?.list_name || __('List')
   }
-  return 'All Prospects'
+  return __('All Prospects')
 })
 
 const showCreateList = ref(false)
@@ -134,7 +135,7 @@ async function createList() {
     newListColor.value   = '#6366f1'
     if (doc?.name) router.push(`/list/${encodeURIComponent(doc.name)}`)
   } catch (e) {
-    toast.error('Failed to create list: ' + e.message)
+    toast.error(__('Failed to create list: {0}', [e.message]))
   } finally {
     creatingList.value = false
   }

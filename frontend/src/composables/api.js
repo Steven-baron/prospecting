@@ -1,3 +1,5 @@
+import { __ } from '../translation.js'
+
 function csrfToken() {
   const t = window.csrf_token
   if (t && t !== '{{ csrf_token }}') return t
@@ -15,7 +17,7 @@ export async function call(method, args = {}) {
   })
   const data = await res.json()
   if (data.exc_type || data.exc) {
-    const msg = data.exc_type || JSON.parse(data.exc || '""') || 'API error'
+    const msg = data.exc_type || JSON.parse(data.exc || '""') || __('API error')
     throw new Error(msg)
   }
   return data.message

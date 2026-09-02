@@ -10,10 +10,10 @@
 
       <!-- Desktop actions -->
       <div class="hidden sm:flex flex-shrink-0 gap-2">
-        <Button :label="showMap ? 'Hide Map' : 'Show Map'" variant="subtle" @click="toggleMap" />
-        <Button v-if="listName" label="Delete list" variant="subtle"
+        <Button :label="showMap ? __('Hide Map') : __('Show Map')" variant="subtle" @click="toggleMap" />
+        <Button v-if="listName" :label="__('Delete list')" variant="subtle"
           class="text-ink-red-3" @click="confirmDeleteList" />
-        <Button label="Find Prospects" variant="solid" icon-left="search"
+        <Button :label="__('Find Prospects')" variant="solid" icon-left="search"
           @click="router.push('/search')" />
       </div>
 
@@ -23,7 +23,7 @@
           :label="undefined" @click="toggleMap" />
         <Button variant="solid" icon="search" @click="router.push('/search')" />
         <Dropdown v-if="listName" :options="[
-          { label: 'Delete list', icon: 'trash-2', theme: 'red', onClick: confirmDeleteList },
+          { label: __('Delete list'), icon: 'trash-2', theme: 'red', onClick: confirmDeleteList },
         ]" placement="bottom-end">
           <Button variant="ghost" icon="more-vertical" />
         </Dropdown>
@@ -32,13 +32,13 @@
 
     <!-- Toolbar: quick filters + refresh / filter / sort / columns -->
     <div class="flex flex-wrap items-center gap-2 border-b px-3 sm:px-5 py-2 flex-shrink-0">
-      <TextInput v-model="fName" placeholder="Business name" class="w-full sm:w-40" />
-      <TextInput v-model="fCategory" placeholder="Category" class="flex-1 sm:flex-none sm:w-32" />
+      <TextInput v-model="fName" :placeholder="__('Business name')" class="w-full sm:w-40" />
+      <TextInput v-model="fCategory" :placeholder="__('Category')" class="flex-1 sm:flex-none sm:w-32" />
       <Select v-model="fStatus" :options="STATUS_FILTER_OPTIONS" class="flex-1 sm:flex-none sm:w-28" />
       <Button
         :variant="hideInCrm ? 'solid' : 'subtle'"
-        :label="hideInCrm ? 'Hidden in CRM' : 'Hide in CRM'"
-        :tooltip="'Hide prospects already pushed to the CRM'"
+        :label="hideInCrm ? __('Hidden in CRM') : __('Hide in CRM')"
+        :tooltip="__('Hide prospects already pushed to the CRM')"
         @click="hideInCrm = !hideInCrm" />
       <div class="ml-auto flex items-center gap-2">
         <Button variant="ghost" icon="refresh-cw" :loading="loading" @click="reload" />
@@ -84,7 +84,7 @@
             selectable: true,
             enableActive: true,
             rowHeight: 40,
-            emptyState: { title: 'No prospects', description: '' },
+            emptyState: { title: __('No prospects'), description: '' },
           }"
           @update:selections="sel => (selectedRows = sel)">
 
@@ -103,17 +103,17 @@
 
           <template #cell="{ column, row, item }">
             <div v-if="column.key === 'status'" @click.stop>
-              <Dropdown :options="STATUSES.map(s => ({ label: s, onClick: () => updateStatus(row.name, s) }))">
+              <Dropdown :options="STATUSES.map(s => ({ label: statusLabel(s), onClick: () => updateStatus(row.name, s) }))">
                 <button class="flex items-center gap-1.5 rounded px-1.5 py-1 text-sm text-ink-gray-7 hover:bg-surface-gray-2">
                   <span :class="['size-2 rounded-full', statusColor(item)]" />
-                  {{ item || 'New' }}
+                  {{ statusLabel(item) }}
                 </button>
               </Dropdown>
             </div>
             <a v-else-if="column.key === 'crm_lead' && item" :href="`/crm/leads/${item}`" target="_blank"
-              rel="noreferrer" @click.stop title="Open in CRM"
+              rel="noreferrer" @click.stop :title="__('Open in CRM')"
               class="inline-flex items-center gap-1 text-sm font-medium text-ink-green-3 hover:underline">
-              <span class="size-2 rounded-full bg-green-500" /> In CRM
+              <span class="size-2 rounded-full bg-green-500" /> {{ __('In CRM') }}
             </a>
             <span v-else-if="column.key === 'crm_lead'" class="text-sm text-ink-gray-4">—</span>
             <span v-else-if="column.key === 'rating'" class="text-amber-500 text-sm">
@@ -126,7 +126,7 @@
             <div v-else-if="column.key === '_actions'" class="flex justify-end items-center gap-0.5" @click.stop>
               <button @click="openDetail(row.name)"
                 class="rounded p-1 text-ink-gray-3 hover:bg-surface-gray-2 hover:text-ink-gray-7"
-                title="View details">
+                :title="__('View details')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
               </button>
@@ -149,14 +149,14 @@
         <div v-if="!loading && !prospects.length"
           class="flex flex-1 flex-col items-center justify-center gap-3 text-ink-gray-5">
           <div class="text-4xl opacity-40">👥</div>
-          <p class="font-medium text-ink-gray-7">No prospects yet</p>
-          <p class="text-sm">Use Find Prospects to search for businesses.</p>
-          <Button label="Find Prospects" variant="solid" @click="router.push('/search')" />
+          <p class="font-medium text-ink-gray-7">{{ __('No prospects yet') }}</p>
+          <p class="text-sm">{{ __('Use Find Prospects to search for businesses.') }}</p>
+          <Button :label="__('Find Prospects')" variant="solid" @click="router.push('/search')" />
         </div>
 
         <!-- Load more -->
         <div v-if="hasMore && !loading" class="flex justify-center border-t p-3">
-          <Button label="Load more" variant="subtle" @click="loadMore" />
+          <Button :label="__('Load more')" variant="subtle" @click="loadMore" />
         </div>
       </div>
 
@@ -165,7 +165,7 @@
         <div ref="mapEl" class="h-full w-full" />
         <div v-if="showMap && !prospects.filter(p => p.lat).length"
           class="absolute inset-0 flex items-center justify-center bg-surface-gray-1 text-ink-gray-5 pointer-events-none">
-          <p class="text-sm">No location data for prospects in this list.</p>
+          <p class="text-sm">{{ __('No location data for prospects in this list.') }}</p>
         </div>
       </div>
 
@@ -218,6 +218,7 @@ import ColumnSettings from '../components/ColumnSettings.vue'
 import MoveToListDialog from '../components/MoveToListDialog.vue'
 import { call } from '../composables/api.js'
 import { useIsMobile } from '../composables/breakpoint.js'
+import { __ } from '../translation.js'
 
 const isMobile = useIsMobile()
 
@@ -232,9 +233,9 @@ const reloadLists = inject('reloadLists', () => {})
 const STATUSES = ['New', 'Lead', 'Dismissed']
 
 // ── Confirm dialog (frappe-ui Dialog) ────────────────────────────────────────
-const confirmDialog = ref({ show: false, title: '', message: '', confirmLabel: 'Confirm', danger: false })
+const confirmDialog = ref({ show: false, title: '', message: '', confirmLabel: __('Confirm'), danger: false })
 let confirmCb = null
-function askConfirm({ title, message, confirmLabel = 'Confirm', danger = false }, onYes) {
+function askConfirm({ title, message, confirmLabel = __('Confirm'), danger = false }, onYes) {
   confirmDialog.value = { show: true, title, message, confirmLabel, danger }
   confirmCb = onYes
 }
@@ -248,20 +249,20 @@ const confirmActions = computed(() => [{
 // Full catalog of selectable columns (Business Name is pinned first; actions
 // are appended automatically and not user-managed).
 const COLUMN_CATALOG = [
-  { label: 'Business Name', key: 'prospect_name',  width: '220px' },
-  { label: 'Category',      key: 'category',        width: '130px' },
-  { label: 'Owner Name',    key: 'owner_name',      width: '150px' },
-  { label: 'Address',       key: '_address_short',  width: '180px' },
-  { label: 'Phone',         key: 'mobile_no',        width: '140px' },
-  { label: 'Email',         key: 'email_id',         width: '180px' },
-  { label: 'Website',       key: 'website',          width: '160px' },
-  { label: 'Rating',        key: 'rating',           width: '80px'  },
-  { label: 'Reviews',       key: 'review_count',     width: '90px'  },
-  { label: 'Source',        key: 'source',           width: '120px' },
-  { label: 'Town',          key: 'territory',        width: '120px' },
-  { label: 'Follow-up',     key: 'next_follow_up',   width: '110px' },
-  { label: 'Status',        key: 'status',           width: '130px' },
-  { label: 'In CRM',        key: 'crm_lead',         width: '80px'  },
+  { label: __('Business Name'), key: 'prospect_name',  width: '220px' },
+  { label: __('Category'),      key: 'category',        width: '130px' },
+  { label: __('Owner Name'),    key: 'owner_name',      width: '150px' },
+  { label: __('Address'),       key: '_address_short',  width: '180px' },
+  { label: __('Phone'),         key: 'mobile_no',        width: '140px' },
+  { label: __('Email'),         key: 'email_id',         width: '180px' },
+  { label: __('Website'),       key: 'website',          width: '160px' },
+  { label: __('Rating'),        key: 'rating',           width: '80px'  },
+  { label: __('Reviews'),       key: 'review_count',     width: '90px'  },
+  { label: __('Source'),        key: 'source',           width: '120px' },
+  { label: __('Town'),          key: 'territory',        width: '120px' },
+  { label: __('Follow-up'),     key: 'next_follow_up',   width: '110px' },
+  { label: __('Status'),        key: 'status',           width: '130px' },
+  { label: __('In CRM'),        key: 'crm_lead',         width: '80px'  },
 ]
 const DEFAULT_COLUMN_KEYS = [
   'prospect_name', 'category', 'territory', 'owner_name', '_address_short', 'mobile_no', 'rating', 'status', 'crm_lead',
@@ -269,9 +270,9 @@ const DEFAULT_COLUMN_KEYS = [
 const ACTIONS_COL = { label: '', key: '_actions', width: '60px' }
 
 const MAP_COLUMNS = [
-  { label: 'Business Name', key: 'prospect_name', width: '200px' },
-  { label: 'Rating',        key: 'rating',        width: '70px'  },
-  { label: 'Status',        key: 'status',        width: '120px' },
+  { label: __('Business Name'), key: 'prospect_name', width: '200px' },
+  { label: __('Rating'),        key: 'rating',        width: '70px'  },
+  { label: __('Status'),        key: 'status',        width: '120px' },
   ACTIONS_COL,
 ]
 
@@ -287,28 +288,32 @@ function onColumnsUpdate(cols) { activeColumns.value = cols }
 
 // Quick-filter + sort state
 const STATUS_FILTER_OPTIONS = [
-  { label: 'Active',    value: ''          },  // New + Lead (hides Dismissed)
-  { label: 'New',       value: 'New'       },
-  { label: 'Lead',      value: 'Lead'      },
-  { label: 'Dismissed', value: 'Dismissed' },
-  { label: 'All',       value: 'All'       },
+  { label: __('Active'),    value: ''          },  // New + Lead (hides Dismissed)
+  { label: __('New'),       value: 'New'       },
+  { label: __('Lead'),      value: 'Lead'      },
+  { label: __('Dismissed'), value: 'Dismissed' },
+  { label: __('All'),       value: 'All'       },
 ]
 // Fields available in the Filter / Sort builders
 const FILTER_FIELDS = [
-  { label: 'Business Name', fieldname: 'prospect_name',  fieldtype: 'Data'   },
-  { label: 'Category',      fieldname: 'category',        fieldtype: 'Data'   },
-  { label: 'Owner Name',    fieldname: 'owner_name',      fieldtype: 'Data'   },
-  { label: 'Email',         fieldname: 'email_id',        fieldtype: 'Data'   },
-  { label: 'Phone',         fieldname: 'mobile_no',       fieldtype: 'Data'   },
-  { label: 'Website',       fieldname: 'website',         fieldtype: 'Data'   },
-  { label: 'Address',       fieldname: 'address',         fieldtype: 'Data'   },
-  { label: 'Rating',        fieldname: 'rating',          fieldtype: 'Float'  },
-  { label: 'Reviews',       fieldname: 'review_count',    fieldtype: 'Int'    },
-  { label: 'Status',        fieldname: 'status',          fieldtype: 'Select', options: ['New', 'Lead', 'Dismissed'] },
-  { label: 'Source',        fieldname: 'source',          fieldtype: 'Data'   },
-  { label: 'Town',          fieldname: 'territory',       fieldtype: 'Data'   },
-  { label: 'Follow-up',     fieldname: 'next_follow_up',  fieldtype: 'Date'   },
-  { label: 'CRM Lead',      fieldname: 'crm_lead',        fieldtype: 'Data'   },
+  { label: __('Business Name'), fieldname: 'prospect_name',  fieldtype: 'Data'   },
+  { label: __('Category'),      fieldname: 'category',        fieldtype: 'Data'   },
+  { label: __('Owner Name'),    fieldname: 'owner_name',      fieldtype: 'Data'   },
+  { label: __('Email'),         fieldname: 'email_id',        fieldtype: 'Data'   },
+  { label: __('Phone'),         fieldname: 'mobile_no',       fieldtype: 'Data'   },
+  { label: __('Website'),       fieldname: 'website',         fieldtype: 'Data'   },
+  { label: __('Address'),       fieldname: 'address',         fieldtype: 'Data'   },
+  { label: __('Rating'),        fieldname: 'rating',          fieldtype: 'Float'  },
+  { label: __('Reviews'),       fieldname: 'review_count',    fieldtype: 'Int'    },
+  { label: __('Status'),        fieldname: 'status',          fieldtype: 'Select', options: [
+    { label: __('New'), value: 'New' },
+    { label: __('Lead'), value: 'Lead' },
+    { label: __('Dismissed'), value: 'Dismissed' },
+  ] },
+  { label: __('Source'),        fieldname: 'source',          fieldtype: 'Data'   },
+  { label: __('Town'),          fieldname: 'territory',       fieldtype: 'Data'   },
+  { label: __('Follow-up'),     fieldname: 'next_follow_up',  fieldtype: 'Date'   },
+  { label: __('CRM Lead'),      fieldname: 'crm_lead',        fieldtype: 'Data'   },
 ]
 const fName      = ref('')
 const fCategory  = ref('')
@@ -368,44 +373,49 @@ const mapEl   = ref(null)
 let map = null, markers = []
 
 const pageTitle = computed(() => {
-  if (!props.listName) return 'All Prospects'
+  if (!props.listName) return __('All Prospects')
   return lists.value.find(l => l.name === props.listName)?.list_name || props.listName
 })
 
 const STATUS_COLORS = { New: 'bg-gray-400', Lead: 'bg-green-500', Dismissed: 'bg-red-400' }
 function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
+function statusLabel(s) {
+  if (s === 'Lead') return __('Lead')
+  if (s === 'Dismissed') return __('Dismissed')
+  return __('New')
+}
 
 function bulkActions(names, unselectAll) {
   const opts = []
   if (viewingDismissed.value) {
-    opts.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => doRestore(names, unselectAll) })
+    opts.push({ label: __('Restore'), icon: 'rotate-ccw', onClick: () => doRestore(names, unselectAll) })
   } else {
-    opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss(names, unselectAll) })
+    opts.push({ label: __('Dismiss'), icon: 'eye-off', onClick: () => doDismiss(names, unselectAll) })
   }
-  opts.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => openMoveDialog(names, unselectAll) })
+  opts.push({ label: __('Move to list'), icon: 'corner-up-right', onClick: () => openMoveDialog(names, unselectAll) })
   if (props.listName) {
-    opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList(names, unselectAll) })
+    opts.push({ label: __('Remove from list'), icon: 'x', onClick: () => doRemoveFromList(names, unselectAll) })
   }
-  opts.push({ label: 'Find Owner Names', icon: 'user', onClick: () => doFindOwnerNames(names, unselectAll) })
-  opts.push({ label: 'Push to CRM', icon: 'external-link', onClick: () => doPushToCRM(names, unselectAll) })
-  opts.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk(names, unselectAll) })
+  opts.push({ label: __('Find Owner Names'), icon: 'user', onClick: () => doFindOwnerNames(names, unselectAll) })
+  opts.push({ label: __('Push to CRM'), icon: 'external-link', onClick: () => doPushToCRM(names, unselectAll) })
+  opts.push({ label: __('Delete (allow re-import)'), icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk(names, unselectAll) })
   return opts
 }
 
 function rowMenuOptions(row) {
   const opts = [
-    { label: 'Push to CRM', icon: 'external-link', onClick: () => doPushToCRM([row.name], null) },
+    { label: __('Push to CRM'), icon: 'external-link', onClick: () => doPushToCRM([row.name], null) },
   ]
   if (row.status === 'Dismissed') {
-    opts.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => doRestore([row.name], null) })
+    opts.push({ label: __('Restore'), icon: 'rotate-ccw', onClick: () => doRestore([row.name], null) })
   } else {
-    opts.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => doDismiss([row.name], null) })
+    opts.push({ label: __('Dismiss'), icon: 'eye-off', onClick: () => doDismiss([row.name], null) })
   }
-  opts.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => openMoveDialog([row.name], null) })
+  opts.push({ label: __('Move to list'), icon: 'corner-up-right', onClick: () => openMoveDialog([row.name], null) })
   if (props.listName) {
-    opts.push({ label: 'Remove from list', icon: 'x', onClick: () => doRemoveFromList([row.name], null) })
+    opts.push({ label: __('Remove from list'), icon: 'x', onClick: () => doRemoveFromList([row.name], null) })
   }
-  opts.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk([row.name], null) })
+  opts.push({ label: __('Delete (allow re-import)'), icon: 'trash-2', theme: 'red', onClick: () => doDeleteBulk([row.name], null) })
   return opts
 }
 
@@ -425,7 +435,7 @@ async function ensureMapReady() {
   if (!window.google?.maps) {
     const kr  = await call('prospecting.api.get_maps_api_key')
     const key = (kr || '').trim()
-    if (!key) { toast.error('Google Maps API key not configured.'); return }
+    if (!key) { toast.error(__('Google Maps API key not configured.')); return }
     await loadMapsScript(key)
   }
   await nextTick()  // let v-show apply so the div has real dimensions
@@ -608,7 +618,7 @@ async function modalActionAdvance(name, apiFn, successMsg) {
 
 function deleteFromModal(name) {
   modalActionAdvance(name,
-    () => call('prospecting.api.delete_prospects', { prospect_names: [name] }), 'Deleted')
+    () => call('prospecting.api.delete_prospects', { prospect_names: [name] }), __('Deleted'))
 }
 
 // ⋯ menu actions dispatched from the detail modal
@@ -617,16 +627,16 @@ function onModalAction(type) {
   if (!name) return
   if (type === 'dismiss') {
     modalActionAdvance(name,
-      () => call('prospecting.api.dismiss_prospects', { prospect_names: [name] }), 'Dismissed')
+      () => call('prospecting.api.dismiss_prospects', { prospect_names: [name] }), __('Dismissed'))
   } else if (type === 'remove') {
     modalActionAdvance(name,
-      () => call('prospecting.api.remove_from_list', { prospect_names: [name] }), 'Removed from list')
+      () => call('prospecting.api.remove_from_list', { prospect_names: [name] }), __('Removed from list'))
   } else if (type === 'restore') {
     // restore keeps the modal on the same prospect (just flips status)
     call('prospecting.api.restore_prospects', { prospect_names: [name] }).then(() => {
       if (openDoc.value?.name === name) openDoc.value.status = 'New'
       onStatusUpdated({ name, status: 'New' })
-      toast.success('Restored')
+      toast.success(__('Restored'))
     })
   } else if (type === 'move') {
     openDoc.value = null            // close modal so the move dialog isn't stacked behind it
@@ -687,7 +697,7 @@ async function doRemoveFromList(names, unselectAll) {
     const r = await call('prospecting.api.remove_from_list', { prospect_names: names })
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
     unselectAll?.()
-    toast.success(`Removed ${r.removed} prospect(s) from list`)
+    toast.success(__('Removed {0} prospect(s) from list', [r.removed]))
     await reload()
     reloadLists()
   } catch (e) {
@@ -700,10 +710,9 @@ async function doRemoveFromList(names, unselectAll) {
 function doDeleteBulk(names, unselectAll) {
   if (!names.length) return
   askConfirm({
-    title: `Delete ${names.length} prospect(s)?`,
-    message: 'This removes the record entirely — unlike Dismiss, the same business ' +
-      'CAN reappear on a future search.',
-    confirmLabel: 'Delete',
+    title: __('Delete {0} prospect(s)?', [names.length]),
+    message: __('This removes the record entirely — unlike Dismiss, the same business CAN reappear on a future search.'),
+    confirmLabel: __('Delete'),
     danger: true,
   }, async () => {
     deleting.value = true
@@ -711,7 +720,7 @@ function doDeleteBulk(names, unselectAll) {
       const r = await call('prospecting.api.delete_prospects', { prospect_names: names })
       if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
       unselectAll?.()
-      toast.success(`Deleted ${r.deleted} prospect(s)`)
+      toast.success(__('Deleted {0} prospect(s)', [r.deleted]))
       await reload()
       reloadLists()
     } catch (e) {
@@ -729,7 +738,7 @@ async function doDismiss(names, unselectAll) {
     const r = await call('prospecting.api.dismiss_prospects', { prospect_names: names })
     if (openDoc.value && names.includes(openDoc.value.name)) openDoc.value = null
     unselectAll?.()
-    toast.success(`Dismissed ${r.dismissed} prospect(s)`)
+    toast.success(__('Dismissed {0} prospect(s)', [r.dismissed]))
     await reload()
     reloadLists()
   } catch (e) {
@@ -745,7 +754,7 @@ async function doRestore(names, unselectAll) {
   try {
     const r = await call('prospecting.api.restore_prospects', { prospect_names: names })
     unselectAll?.()
-    toast.success(`Restored ${r.restored} prospect(s)`)
+    toast.success(__('Restored {0} prospect(s)', [r.restored]))
     await reload()
     reloadLists()
   } catch (e) {
@@ -759,16 +768,16 @@ async function doPushToCRM(names, unselectAll) {
   if (!names.length) return
   pushing.value = true
   const tid = toast.create({
-    message: `Pushing ${names.length} prospect(s) to CRM…`,
+    message: __('Pushing {0} prospect(s) to CRM…', [names.length]),
     type: 'info', duration: 600,
   })
   try {
     const r = await call('prospecting.api.push_to_crm', { prospect_names: names })
     const parts = []
-    if (r.created)        parts.push(`${r.created} lead(s) created`)
-    if (r.skipped)        parts.push(`${r.skipped} already exist`)
-    if (r.errors?.length) parts.push(`${r.errors.length} failed`)
-    toast.success(parts.join(' · ') || 'Done')
+    if (r.created)        parts.push(__('{0} lead(s) created', [r.created]))
+    if (r.skipped)        parts.push(__('{0} already exist', [r.skipped]))
+    if (r.errors?.length) parts.push(__('{0} failed', [r.errors.length]))
+    toast.success(parts.join(' · ') || __('Done'))
     unselectAll?.()
     await reload()
   } catch (e) {
@@ -783,7 +792,7 @@ async function doFindOwnerNames(names, unselectAll) {
   if (!names.length) return
   findingOwners.value = true
   const tid = toast.create({
-    message: `Finding owner names for ${names.length} prospect(s)…`,
+    message: __('Finding owner names for {0} prospect(s)…', [names.length]),
     type: 'info', duration: 600,
   })
   try {
@@ -802,14 +811,14 @@ async function doFindOwnerNames(names, unselectAll) {
     }
     const skipped = names.length - found - (r.errors?.length || 0)
     const parts = []
-    if (found)            parts.push(`${found} owner name(s) found`)
-    if (skipped)          parts.push(`${skipped} no name found`)
-    if (r.errors?.length) parts.push(`${r.errors.length} error(s)`)
+    if (found)            parts.push(__('{0} owner name(s) found', [found]))
+    if (skipped)          parts.push(__('{0} no name found', [skipped]))
+    if (r.errors?.length) parts.push(__('{0} error(s)', [r.errors.length]))
     if (r.errors?.length) {
-      const firstErr = r.errors[0]?.error || 'Unknown error'
-      toast.error(`Error (${r.errors.length} prospect(s)): ${firstErr}`)
+      const firstErr = r.errors[0]?.error || __('Unknown error')
+      toast.error(__('Error ({0} prospect(s)): {1}', [r.errors.length, firstErr]))
     } else {
-      toast.success(parts.join(' · ') || 'Done')
+      toast.success(parts.join(' · ') || __('Done'))
     }
     unselectAll?.()
   } catch (e) {
@@ -825,15 +834,15 @@ function confirmDeleteList() {
   const label   = listObj?.list_name || props.listName
   const count   = listObj?._count || 0
   askConfirm({
-    title: `Delete list "${label}"?`,
+    title: __('Delete list "{0}"?', [label]),
     message: count
-      ? `This deletes the list and its ${count} prospect(s).`
-      : 'This deletes the list.',
-    confirmLabel: 'Delete list',
+      ? __('This deletes the list and its {0} prospect(s).', [count])
+      : __('This deletes the list.'),
+    confirmLabel: __('Delete list'),
     danger: true,
   }, async () => {
     await call('prospecting.api.delete_list', { list_name: props.listName })
-    toast.success(`List "${label}" deleted`)
+    toast.success(__('List "{0}" deleted', [label]))
     await reloadLists()
     router.push('/all')
   })

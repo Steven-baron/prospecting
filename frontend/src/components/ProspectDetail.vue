@@ -28,31 +28,31 @@
         <!-- Action row: icon buttons + status -->
         <div class="mt-3 flex flex-wrap items-center gap-1">
           <Button v-if="doc.prospect_list" variant="subtle" size="sm" icon="list"
-            :tooltip="'View list'" @click="emit('go-to-list', doc.prospect_list)" />
+            :tooltip="__('View list')" @click="emit('go-to-list', doc.prospect_list)" />
           <a v-if="doc.google_maps_uri" :href="doc.google_maps_uri" target="_blank" rel="noreferrer">
-            <Button variant="subtle" size="sm" icon="map-pin" :tooltip="'Open in Google Maps'" />
+            <Button variant="subtle" size="sm" icon="map-pin" :tooltip="__('Open in Google Maps')" />
           </a>
           <a v-if="doc.website" :href="doc.website" target="_blank" rel="noreferrer">
-            <Button variant="subtle" size="sm" icon="globe" :tooltip="'Open website'" />
+            <Button variant="subtle" size="sm" icon="globe" :tooltip="__('Open website')" />
           </a>
           <a v-if="doc.crm_lead" :href="`/crm/leads/${doc.crm_lead}`" target="_blank" rel="noreferrer">
-            <Button variant="subtle" size="sm" icon="external-link" :tooltip="'Open in CRM'" />
+            <Button variant="subtle" size="sm" icon="external-link" :tooltip="__('Open in CRM')" />
           </a>
-          <Dropdown class="ml-auto" :options="STATUSES.map(s => ({ label: s, onClick: () => onStatus(s) }))">
+          <Dropdown class="ml-auto" :options="STATUSES.map(s => ({ label: statusLabel(s), onClick: () => onStatus(s) }))">
             <button class="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-ink-gray-8 hover:bg-surface-gray-2">
               <span :class="['size-2 rounded-full', statusColor(doc.status)]" />
-              {{ doc.status || 'New' }}
+              {{ statusLabel(doc.status) }}
             </button>
           </Dropdown>
         </div>
 
         <!-- Tabs -->
         <div class="mt-3 flex gap-1 border-b">
-          <button v-for="t in TABS" :key="t"
+          <button v-for="t in TABS" :key="t.id"
             class="-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition"
-            :class="tab === t ? 'border-outline-gray-4 text-ink-gray-9' : 'border-transparent text-ink-gray-5 hover:text-ink-gray-7'"
-            @click="tab = t">
-            {{ t }}
+            :class="tab === t.id ? 'border-outline-gray-4 text-ink-gray-9' : 'border-transparent text-ink-gray-5 hover:text-ink-gray-7'"
+            @click="tab = t.id">
+            {{ t.label }}
           </button>
         </div>
 
@@ -60,29 +60,29 @@
         <div class="min-h-[260px] py-3">
           <!-- Details -->
           <div v-show="tab === 'Details'" class="flex flex-col gap-0.5">
-            <FieldRow label="Status">
-              <Dropdown :options="STATUSES.map(s => ({ label: s, onClick: () => onStatus(s) }))">
+            <FieldRow :label="__('Status')">
+              <Dropdown :options="STATUSES.map(s => ({ label: statusLabel(s), onClick: () => onStatus(s) }))">
                 <button class="flex w-full items-center gap-1.5 rounded px-2 py-1 text-base text-ink-gray-8 hover:bg-surface-gray-2">
                   <span :class="['size-2 rounded-full', statusColor(doc.status)]" />
-                  {{ doc.status || 'New' }}
+                  {{ statusLabel(doc.status) }}
                 </button>
               </Dropdown>
             </FieldRow>
-            <FieldRow label="Category"><EditText field="category" /></FieldRow>
-            <FieldRow label="Owner Name"><EditText field="owner_name" /></FieldRow>
+            <FieldRow :label="__('Category')"><EditText field="category" /></FieldRow>
+            <FieldRow :label="__('Owner Name')"><EditText field="owner_name" /></FieldRow>
             <div v-if="ownerExamples.length" class="px-3 pb-1">
               <div v-for="ex in ownerExamples" :key="ex"
                 class="mt-1 rounded bg-surface-gray-1 px-2.5 py-1.5 text-xs italic text-ink-gray-6 leading-relaxed">
                 "{{ ex }}"
               </div>
             </div>
-            <FieldRow label="Town"><EditText field="territory" /></FieldRow>
-            <FieldRow label="Source"><EditText field="source" /></FieldRow>
-            <FieldRow label="Follow-up"><EditText field="next_follow_up" type="date" /></FieldRow>
-            <FieldRow label="Rating">
+            <FieldRow :label="__('Town')"><EditText field="territory" /></FieldRow>
+            <FieldRow :label="__('Source')"><EditText field="source" /></FieldRow>
+            <FieldRow :label="__('Follow-up')"><EditText field="next_follow_up" type="date" /></FieldRow>
+            <FieldRow :label="__('Rating')">
               <span v-if="doc.rating != null" class="px-2 text-sm">
                 <span class="text-amber-500 font-medium">★ {{ Number(doc.rating).toFixed(1) }}</span>
-                <span class="ml-1 text-xs text-ink-gray-5">({{ doc.review_count || 0 }} reviews)</span>
+                <span class="ml-1 text-xs text-ink-gray-5">({{ __('{0} reviews', [doc.review_count || 0]) }})</span>
               </span>
               <span v-else class="px-2 text-sm text-ink-gray-4">—</span>
             </FieldRow>
@@ -90,27 +90,27 @@
 
           <!-- Contact -->
           <div v-show="tab === 'Contact'" class="flex flex-col gap-0.5">
-            <FieldRow label="Phone"><EditText field="mobile_no" /></FieldRow>
-            <FieldRow label="Email">
+            <FieldRow :label="__('Phone')"><EditText field="mobile_no" /></FieldRow>
+            <FieldRow :label="__('Email')">
               <div class="flex items-center gap-1">
                 <div class="min-w-0 flex-1"><EditText field="email_id" /></div>
                 <Button variant="ghost" size="sm" icon="search" :loading="findingEmail"
-                  :tooltip="'Find email'" @click="findEmail" />
+                  :tooltip="__('Find email')" @click="findEmail" />
               </div>
             </FieldRow>
-            <FieldRow label="Website"><EditText field="website" /></FieldRow>
-            <FieldRow label="Contact"><EditText field="contact_person" /></FieldRow>
-            <FieldRow label="Designation"><EditText field="designation" /></FieldRow>
+            <FieldRow :label="__('Website')"><EditText field="website" /></FieldRow>
+            <FieldRow :label="__('Contact')"><EditText field="contact_person" /></FieldRow>
+            <FieldRow :label="__('Designation')"><EditText field="designation" /></FieldRow>
             <div class="px-3 pt-2">
-              <p class="mb-1 text-sm text-ink-gray-5">Address</p>
+              <p class="mb-1 text-sm text-ink-gray-5">{{ __('Address') }}</p>
               <textarea
                 :value="doc.address"
                 rows="2"
-                placeholder="Add address..."
+                :placeholder="__('Add address...')"
                 class="w-full resize-none rounded border border-transparent bg-transparent px-2 py-1 text-sm text-ink-gray-8 placeholder-ink-gray-5 focus:border-outline-gray-3 focus:bg-surface-white focus:outline-none transition"
                 @blur="e => saveField('address', e.target.value)" />
               <a v-if="doc.google_maps_uri" :href="doc.google_maps_uri" target="_blank" rel="noreferrer" class="mt-1 inline-block">
-                <Button label="View on Google Maps" variant="outline" size="sm" />
+                <Button :label="__('View on Google Maps')" variant="outline" size="sm" />
               </a>
             </div>
           </div>
@@ -120,18 +120,18 @@
             <textarea
               v-model="localNotes"
               rows="9"
-              placeholder="Add notes about this prospect…"
+              :placeholder="__('Add notes about this prospect…')"
               class="w-full resize-none rounded border border-outline-gray-2 bg-surface-white px-3 py-2 text-sm text-ink-gray-8 placeholder-ink-gray-3 focus:border-outline-blue-2 focus:outline-none transition-colors"
               @blur="saveNotes" />
-            <p v-if="notesSaved" class="mt-1 text-xs text-ink-green-3">Saved</p>
+            <p v-if="notesSaved" class="mt-1 text-xs text-ink-green-3">{{ __('Saved') }}</p>
           </div>
         </div>
 
         <!-- Inline delete confirm (triggered from the ⋯ menu) -->
         <div v-if="confirmingDelete" class="flex items-center gap-2 border-t pt-3">
-          <span class="text-sm text-ink-gray-7">Delete this prospect? (can re-import later)</span>
-          <Button label="Cancel" variant="subtle" size="sm" class="ml-auto" @click="confirmingDelete = false" />
-          <Button label="Delete" variant="solid" theme="red" size="sm" @click="emit('delete', doc.name)" />
+          <span class="text-sm text-ink-gray-7">{{ __('Delete this prospect? (can re-import later)') }}</span>
+          <Button :label="__('Cancel')" variant="subtle" size="sm" class="ml-auto" @click="confirmingDelete = false" />
+          <Button :label="__('Delete')" variant="solid" theme="red" size="sm" @click="emit('delete', doc.name)" />
         </div>
 
       </div>
@@ -143,6 +143,7 @@
 import { ref, computed, watch, h } from 'vue'
 import { Dialog, Button, Dropdown, FormControl, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
+import { __ } from '../translation.js'
 
 const props = defineProps({
   doc:     { type: Object,  default: null },
@@ -154,17 +155,17 @@ const emit = defineEmits(['close', 'delete', 'status-updated', 'field-updated', 
 // ⋯ menu — full single-record action set
 const menuOptions = computed(() => {
   const o = [
-    { label: 'Push to CRM', icon: 'external-link', onClick: pushOneToCRM },
-    { label: 'Find Owner Names', icon: 'user', onClick: findOwnerNames },
+    { label: __('Push to CRM'), icon: 'external-link', onClick: pushOneToCRM },
+    { label: __('Find Owner Names'), icon: 'user', onClick: findOwnerNames },
   ]
   if (props.doc?.status === 'Dismissed')
-    o.push({ label: 'Restore', icon: 'rotate-ccw', onClick: () => emit('action', 'restore') })
+    o.push({ label: __('Restore'), icon: 'rotate-ccw', onClick: () => emit('action', 'restore') })
   else
-    o.push({ label: 'Dismiss', icon: 'eye-off', onClick: () => emit('action', 'dismiss') })
-  o.push({ label: 'Move to list', icon: 'corner-up-right', onClick: () => emit('action', 'move') })
+    o.push({ label: __('Dismiss'), icon: 'eye-off', onClick: () => emit('action', 'dismiss') })
+  o.push({ label: __('Move to list'), icon: 'corner-up-right', onClick: () => emit('action', 'move') })
   if (props.doc?.prospect_list)
-    o.push({ label: 'Remove from list', icon: 'x', onClick: () => emit('action', 'remove') })
-  o.push({ label: 'Delete (allow re-import)', icon: 'trash-2', theme: 'red', onClick: () => { confirmingDelete.value = true } })
+    o.push({ label: __('Remove from list'), icon: 'x', onClick: () => emit('action', 'remove') })
+  o.push({ label: __('Delete (allow re-import)'), icon: 'trash-2', theme: 'red', onClick: () => { confirmingDelete.value = true } })
   return o
 })
 
@@ -173,12 +174,21 @@ const show = computed({
   set: (v) => { if (!v) emit('close') },
 })
 
-const TABS = ['Details', 'Contact', 'Notes']
+const TABS = [
+  { id: 'Details', label: __('Details') },
+  { id: 'Contact', label: __('Contact') },
+  { id: 'Notes', label: __('Notes') },
+]
 const tab = ref('Details')
 
 const STATUSES = ['New', 'Lead', 'Dismissed']
 const STATUS_COLORS = { New: 'bg-gray-400', Lead: 'bg-green-500', Dismissed: 'bg-red-400' }
 function statusColor(s) { return STATUS_COLORS[s] || 'bg-gray-300' }
+function statusLabel(s) {
+  if (s === 'Lead') return __('Lead')
+  if (s === 'Dismissed') return __('Dismissed')
+  return __('New')
+}
 
 const findingEmail    = ref(false)
 const localNotes      = ref('')
@@ -206,7 +216,7 @@ async function saveField(key, value) {
     props.doc[key] = value
     emit('field-updated', { name: props.doc.name, key, value })
   } catch (e) {
-    toast.error(`Failed to save ${key}`)
+    toast.error(__('Failed to save {0}', [key]))
   }
 }
 
@@ -224,11 +234,24 @@ const EditText = (p) =>
       type: p.type === 'date' ? 'date' : 'text',
       size: 'sm',
       modelValue: props.doc?.[p.field] ?? '',
-      placeholder: `Add ${p.field.replace(/_/g, ' ')}...`,
+      placeholder: FIELD_PLACEHOLDERS[p.field] || '',
       onChange: (e) => saveField(p.field, e?.target ? e.target.value : e),
     }),
   ])
 EditText.props = ['field', 'type']
+
+const FIELD_PLACEHOLDERS = {
+  category: __('Add category...'),
+  owner_name: __('Add owner name...'),
+  territory: __('Add territory...'),
+  source: __('Add source...'),
+  next_follow_up: __('Add next follow up...'),
+  mobile_no: __('Add mobile no...'),
+  email_id: __('Add email id...'),
+  website: __('Add website...'),
+  contact_person: __('Add contact person...'),
+  designation: __('Add designation...'),
+}
 
 async function onStatus(status) {
   await call('frappe.client.set_value', { doctype: 'Prospect', name: props.doc.name, fieldname: 'status', value: status })
@@ -240,7 +263,7 @@ const findingOwners = ref(false)
 async function findOwnerNames() {
   if (!props.doc) return
   findingOwners.value = true
-  const tid = toast.create({ message: 'Finding owner name…', type: 'info', duration: 600 })
+  const tid = toast.create({ message: __('Finding owner name…'), type: 'info', duration: 600 })
   try {
     const r = await call('prospecting.api.find_owner_names', { prospect_names: [props.doc.name] })
     const data = r.results?.[props.doc.name]
@@ -248,11 +271,11 @@ async function findOwnerNames() {
       props.doc.owner_name = data.owner_name
       props.doc.owner_name_context = JSON.stringify(data.examples || [])
       emit('field-updated', { name: props.doc.name, key: 'owner_name', value: data.owner_name })
-      toast.success(`Owner: ${data.owner_name}`)
+      toast.success(__('Owner: {0}', [data.owner_name]))
     } else if (r.errors?.length) {
       toast.error(r.errors[0].error)
     } else {
-      toast.warning('No owner name found.')
+      toast.warning(__('No owner name found.'))
     }
   } catch (e) {
     toast.error(e.message)
@@ -270,9 +293,9 @@ async function findEmail() {
     if (r?.email) {
       props.doc.email_id = r.email
       emit('field-updated', { name: props.doc.name, key: 'email_id', value: r.email })
-      toast.success(`Found: ${r.email}`)
+      toast.success(__('Found: {0}', [r.email]))
     } else {
-      toast.warning(r?.reason || 'No email found.')
+      toast.warning(r?.reason || __('No email found.'))
     }
   } catch (e) {
     toast.error(e.message)
@@ -290,7 +313,7 @@ async function saveNotes() {
     clearTimeout(notesSavedTimer)
     notesSavedTimer = setTimeout(() => { notesSaved.value = false }, 2000)
   } catch (e) {
-    toast.error('Failed to save notes')
+    toast.error(__('Failed to save notes'))
   }
 }
 
@@ -301,12 +324,12 @@ async function pushOneToCRM() {
   try {
     const r = await call('prospecting.api.push_to_crm', { prospect_names: [props.doc.name] })
     if (r.created) {
-      toast.success('Lead created in CRM')
+      toast.success(__('Lead created in CRM'))
       props.doc.status = 'Lead'
       props.doc.crm_lead = r.lead_names?.[props.doc.name] || props.doc.crm_lead
       emit('status-updated', { name: props.doc.name, status: 'Lead' })
     } else if (r.skipped) {
-      toast.warning('Lead already exists in CRM')
+      toast.warning(__('Lead already exists in CRM'))
     } else if (r.errors?.length) {
       toast.error(r.errors[0].error)
     }

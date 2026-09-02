@@ -1,7 +1,7 @@
 <template>
   <Popover placement="bottom-end">
     <template #target="{ togglePopover }">
-      <Button variant="subtle" label="Columns" icon-left="columns" @click="togglePopover" />
+      <Button variant="subtle" :label="__('Columns')" icon-left="columns" @click="togglePopover" />
     </template>
     <template #body-main>
       <div class="min-w-[260px] p-1.5">
@@ -33,12 +33,12 @@
         <!-- Add column + reset -->
         <div class="mt-1.5 flex flex-col gap-1 border-t pt-1.5">
           <Dropdown v-if="addable.length" :options="addable.map(c => ({ label: c.label, onClick: () => add(c.key) }))">
-            <Button class="w-full !justify-start !text-ink-gray-5" variant="ghost" label="Add Column" icon-left="plus" />
+            <Button class="w-full !justify-start !text-ink-gray-5" variant="ghost" :label="__('Add Column')" icon-left="plus" />
           </Dropdown>
           <Button
             v-if="!isDefault"
             class="w-full !justify-start !text-ink-gray-5"
-            variant="ghost" label="Reset to Default" icon-left="rotate-ccw"
+            variant="ghost" :label="__('Reset to Default')" icon-left="rotate-ccw"
             @click="reset" />
         </div>
       </div>

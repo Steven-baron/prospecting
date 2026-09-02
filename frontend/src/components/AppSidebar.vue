@@ -6,7 +6,7 @@
           P
         </div>
         <span v-if="!collapsed" class="text-base font-semibold text-ink-gray-9 transition-all duration-300">
-          Prospecting
+          {{ __('Prospecting') }}
         </span>
       </div>
     </template>
@@ -32,24 +32,24 @@
 
     <template #footer-items="{ isCollapsed }">
       <SidebarItem
-        label="New List"
+        :label="__('New List')"
         :isCollapsed="isCollapsed"
         :onClick="() => emit('create-list')">
         <template #icon>
           <LucidePlus class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
-      <SidebarItem label="Settings" :isCollapsed="isCollapsed" to="/settings" :isActive="route.path === '/settings'">
+      <SidebarItem :label="__('Settings')" :isCollapsed="isCollapsed" to="/settings" :isActive="route.path === '/settings'">
         <template #icon>
           <LucideSettings class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
-      <SidebarItem label="Home" :isCollapsed="isCollapsed" :onClick="goHome">
+      <SidebarItem :label="__('Home')" :isCollapsed="isCollapsed" :onClick="goHome">
         <template #icon>
           <LucideHome class="size-4 text-ink-gray-6" />
         </template>
       </SidebarItem>
-      <SidebarItem label="Desk" :isCollapsed="isCollapsed" :onClick="goDesk">
+      <SidebarItem :label="__('Desk')" :isCollapsed="isCollapsed" :onClick="goDesk">
         <template #icon>
           <LucideLayoutDashboard class="size-4 text-ink-gray-6" />
         </template>
@@ -62,6 +62,7 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Sidebar, SidebarItem } from 'frappe-ui'
+import { __ } from '../translation.js'
 import LucideSearch from '~icons/lucide/search'
 import LucideUsers from '~icons/lucide/users'
 import LucidePlus from '~icons/lucide/plus'
@@ -89,13 +90,13 @@ const navSections = computed(() => [
     label: '',
     items: [
       {
-        label: 'Find Prospects',
+        label: __('Find Prospects'),
         _icon: LucideSearch,
         to: '/search',
         isActive: route.path === '/search',
       },
       {
-        label: 'All Prospects',
+        label: __('All Prospects'),
         _icon: LucideUsers,
         to: '/all',
         isActive: route.path === '/all',
@@ -104,7 +105,7 @@ const navSections = computed(() => [
     ],
   },
   {
-    label: 'Lists',
+    label: __('Lists'),
     items: props.lists.map(l => ({
       label:     l.list_name,
       to:        `/list/${encodeURIComponent(l.name)}`,

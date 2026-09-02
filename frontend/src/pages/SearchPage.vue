@@ -5,32 +5,32 @@
     <div class="flex-shrink-0 border-b bg-surface-white px-5 py-3">
       <div class="flex flex-wrap gap-3 items-end">
         <div class="flex-[2] min-w-36">
-          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">What</p>
-          <TextInput v-model="what" placeholder="e.g. dentists, ESL schools…"
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">{{ __('What') }}</p>
+          <TextInput v-model="what" :placeholder="__('e.g. dentists, ESL schools…')"
             @keydown.enter="search" />
         </div>
         <div class="flex-[1.5] min-w-32">
-          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Where</p>
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">{{ __('Where') }}</p>
           <input
             ref="locInputEl"
             v-model="whereText"
             @input="onLocationInput"
-            placeholder="City or area…"
+            :placeholder="__('City or area…')"
             autocomplete="off"
             class="form-input w-full text-sm" />
         </div>
         <div class="relative z-20 flex-1 min-w-28">
-          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Category</p>
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">{{ __('Category') }}</p>
           <SearchableSelect
             v-model="categoryValue"
             :options="categories"
-            placeholder="Any category"
-            empty-option="Any category"
-            filter-placeholder="Type to filter categories…"
+            :placeholder="__('Any category')"
+            :empty-option="__('Any category')"
+            :filter-placeholder="__('Type to filter categories…')"
           />
         </div>
         <div class="w-24 shrink-0">
-          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Depth</p>
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">{{ __('Depth') }}</p>
           <select
             v-model="depth"
             class="form-input w-full rounded border border-outline-gray-2 bg-surface-white px-2 py-1.5 text-sm text-ink-gray-8"
@@ -40,7 +40,7 @@
             </option>
           </select>
         </div>
-        <Button label="Search" variant="solid" icon-left="search" class="w-full shrink-0 sm:w-auto"
+        <Button :label="__('Search')" variant="solid" icon-left="search" class="w-full shrink-0 sm:w-auto"
           :loading="searching" @click="search" />
       </div>
     </div>
@@ -52,10 +52,10 @@
       <div class="sm:hidden fixed bottom-4 left-1/2 z-30 -translate-x-1/2 flex rounded-full bg-ink-gray-9 p-0.5 shadow-lg">
         <button @click="mobileView = 'list'"
           class="rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
-          :class="mobileView === 'list' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">List</button>
+          :class="mobileView === 'list' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">{{ __('List') }}</button>
         <button @click="mobileView = 'map'"
           class="rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
-          :class="mobileView === 'map' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">Map</button>
+          :class="mobileView === 'map' ? 'bg-surface-white text-ink-gray-9' : 'text-white'">{{ __('Map') }}</button>
       </div>
 
       <!-- Results panel -->
@@ -64,13 +64,12 @@
         <div class="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[42px]">
           <span class="text-sm text-ink-gray-6">
             <template v-if="results.length">
-              <strong class="text-ink-gray-9">{{ results.length }}</strong> results
-              · {{ selected.size }} selected
+              {{ __('{0} results · {1} selected', [results.length, selected.size]) }}
             </template>
-            <template v-else-if="!searching">Search to find prospects</template>
+            <template v-else-if="!searching">{{ __('Search to find prospects') }}</template>
           </span>
           <Button v-if="selected.size > 0"
-            :label="`Save ${selected.size}`"
+            :label="__('Save {0}', [selected.size])"
             variant="solid"
             size="sm"
             @click="showSaveDialog = true" />
@@ -85,7 +84,7 @@
             class="form-checkbox cursor-pointer"
             @click.stop="toggleSelectAll" />
           <span class="text-xs text-ink-gray-5 select-none">
-            {{ selected.size === results.length ? 'Deselect all' : 'Select all' }}
+            {{ selected.size === results.length ? __('Deselect all') : __('Select all') }}
           </span>
         </div>
 
@@ -93,7 +92,7 @@
           <div v-if="!results.length && !searching"
             class="flex flex-col items-center justify-center h-full gap-3 text-ink-gray-5 p-8">
             <div class="text-3xl opacity-40">🔍</div>
-            <p class="text-sm text-center">Search for businesses to start building a prospect list.</p>
+            <p class="text-sm text-center">{{ __('Search for businesses to start building a prospect list.') }}</p>
           </div>
 
           <div
@@ -121,12 +120,12 @@
               <div class="mt-0.5 flex gap-3">
                 <span v-if="r.phone" class="text-xs text-ink-gray-5">{{ r.phone }}</span>
                 <a v-if="r.website" :href="r.website" target="_blank" rel="noreferrer"
-                  @click.stop class="text-xs text-ink-blue-2">Website</a>
+                  @click.stop class="text-xs text-ink-blue-2">{{ __('Website') }}</a>
               </div>
             </div>
             <button @click.stop="openDrawer(r)"
               class="flex-shrink-0 self-center rounded p-1.5 text-ink-gray-3 hover:bg-surface-gray-2 hover:text-ink-gray-7"
-              title="View details">
+              :title="__('View details')">
               <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
@@ -142,7 +141,7 @@
           class="absolute inset-0 flex items-center justify-center bg-surface-gray-1 text-ink-gray-5">
           <div class="text-center px-8">
             <div class="text-3xl mb-3 opacity-40">🗺</div>
-            <p class="text-sm">Select a city to see its boundary, then search.</p>
+            <p class="text-sm">{{ __('Select a city to see its boundary, then search.') }}</p>
           </div>
         </div>
       </div>
@@ -152,21 +151,21 @@
     </div>
 
     <!-- Save to List — buttons + list rows (no Select menus) -->
-    <Dialog v-model="showSaveDialog" :options="{ title: 'Save to Prospect List', size: 'sm' }">
+    <Dialog v-model="showSaveDialog" :options="{ title: __('Save to Prospect List'), size: 'sm' }">
       <template #body-content>
         <div class="space-y-4 px-1">
           <div class="flex gap-2">
             <Button
               size="sm"
               :variant="saveMode === 'existing' ? 'solid' : 'subtle'"
-              label="Existing list"
+              :label="__('Existing list')"
               :disabled="!lists.length"
               @click="saveMode = 'existing'"
             />
             <Button
               size="sm"
               :variant="saveMode === 'new' ? 'solid' : 'subtle'"
-              label="New list"
+              :label="__('New list')"
               @click="saveMode = 'new'"
             />
           </div>
@@ -184,25 +183,25 @@
                 @click="saveListName = l.name"
               >
                 <span>{{ l.list_name || l.name }}</span>
-                <span v-if="saveListName === l.name" class="text-xs text-ink-gray-5">Selected</span>
+                <span v-if="saveListName === l.name" class="text-xs text-ink-gray-5">{{ __('Selected') }}</span>
               </button>
             </div>
-            <p v-else class="text-xs text-ink-gray-5">No lists yet — use “New list”.</p>
+            <p v-else class="text-xs text-ink-gray-5">{{ __('No lists yet — use "New list".') }}</p>
           </div>
           <div v-else>
-            <FormControl label="New list name" type="text" v-model="saveNewName"
-              placeholder="e.g. Toronto Dentists" />
+            <FormControl :label="__('New list name')" type="text" v-model="saveNewName"
+              :placeholder="__('e.g. Toronto Dentists')" />
           </div>
           <label class="flex items-center gap-2 cursor-pointer text-sm text-ink-gray-7">
             <input type="checkbox" v-model="enrichEmail" class="form-checkbox">
-            Try to find emails from websites (slower)
+            {{ __('Try to find emails from websites (slower)') }}
           </label>
         </div>
       </template>
       <template #actions>
         <div class="flex justify-end gap-2">
-          <Button label="Cancel" variant="subtle" @click="showSaveDialog = false" />
-          <Button :label="`Save ${selected.size} prospects`" variant="solid"
+          <Button :label="__('Cancel')" variant="subtle" @click="showSaveDialog = false" />
+          <Button :label="__('Save {0} prospects', [selected.size])" variant="solid"
             :loading="saving" @click="save" />
         </div>
       </template>
@@ -221,6 +220,7 @@ export default { name: 'SearchPage' }
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, TextInput, Dialog, FormControl, Badge, toast } from 'frappe-ui'
+import { __ } from '../translation.js'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import SearchResultDetail from '../components/SearchResultDetail.vue'
 import { call } from '../composables/api.js'
@@ -244,9 +244,9 @@ const searching  = ref(false)
 const cityBounds = ref(null)
 
 const depthOptions = [
-  { label: 'Quick',    value: '1' },
-  { label: 'Full',     value: '2' },
-  { label: 'Thorough', value: '3' },
+  { label: __('Quick'),    value: '1' },
+  { label: __('Full'),     value: '2' },
+  { label: __('Thorough'), value: '3' },
 ]
 
 
@@ -455,7 +455,7 @@ async function search() {
       : raw
     dropMarkers()
   } catch (e) {
-    toast.error('Search failed: ' + e.message)
+    toast.error(__('Search failed: {0}', [e.message]))
   } finally {
     searching.value = false
   }
@@ -480,8 +480,8 @@ async function save() {
   if (!chosen.length) return
   const list_name = saveMode.value === 'existing' ? saveListName.value : ''
   const new_name  = saveMode.value === 'new' ? saveNewName.value.trim() : ''
-  if (saveMode.value === 'existing' && !list_name) { toast.warning('Pick a list.'); return }
-  if (saveMode.value === 'new' && !new_name) { toast.warning('Enter a list name.'); return }
+  if (saveMode.value === 'existing' && !list_name) { toast.warning(__('Pick a list.')); return }
+  if (saveMode.value === 'new' && !new_name) { toast.warning(__('Enter a list name.')); return }
 
   saving.value = true
   try {
@@ -489,14 +489,18 @@ async function save() {
       prospects: JSON.stringify(chosen),
       list_name, new_list_name: new_name, enrich_email: enrichEmail.value ? 1 : 0,
     })
-    toast.success(`Saved ${r.created} prospects${r.skipped ? ` · ${r.skipped} already existed` : ''}`)
+    toast.success(
+      r.skipped
+        ? __('Saved {0} prospects · {1} already existed', [r.created, r.skipped])
+        : __('Saved {0} prospects', [r.created]),
+    )
     showSaveDialog.value = false
     selected.value       = new Set()
     await reloadLists()
     const target = list_name || r.list_name
     if (target) router.push(`/list/${encodeURIComponent(target)}`)
   } catch (e) {
-    toast.error('Save failed: ' + e.message)
+    toast.error(__('Save failed: {0}', [e.message]))
   } finally {
     saving.value = false
   }

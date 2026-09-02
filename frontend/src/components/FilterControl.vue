@@ -2,7 +2,7 @@
   <Popover placement="bottom-end">
     <template #target="{ togglePopover }">
       <div class="flex items-center">
-        <Button :label="'Filter'" icon-left="filter"
+        <Button :label="__('Filter')" icon-left="filter"
           :class="modelValue.length ? 'rounded-r-none' : ''"
           @click="togglePopover">
           <template v-if="modelValue.length" #suffix>
@@ -20,12 +20,12 @@
         <div v-if="modelValue.length" class="flex flex-col gap-2">
           <div v-for="(f, i) in modelValue" :key="i" class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <div class="w-12 pl-2 text-end text-sm text-ink-gray-5">{{ i === 0 ? 'Where' : 'And' }}</div>
+              <div class="w-12 pl-2 text-end text-sm text-ink-gray-5">{{ i === 0 ? __('Where') : __('And') }}</div>
               <div class="!min-w-[140px]">
                 <Autocomplete
                   :options="fieldOptions"
                   :model-value="f.field"
-                  placeholder="Field"
+                  :placeholder="__('Field')"
                   @update:model-value="v => setField(i, v)" />
               </div>
               <div>
@@ -46,7 +46,7 @@
                   v-else-if="!isUnary(f.operator)"
                   type="text"
                   :model-value="f.value"
-                  placeholder="Value"
+                  :placeholder="__('Value')"
                   :debounce="300"
                   @update:model-value="v => update(i, 'value', v)" />
               </div>
@@ -54,9 +54,9 @@
             <Button variant="ghost" icon="x" @click="remove(i)" />
           </div>
         </div>
-        <div v-else class="px-1 py-2 text-sm text-ink-gray-5">No filters applied</div>
+        <div v-else class="px-1 py-2 text-sm text-ink-gray-5">{{ __('No filters applied') }}</div>
         <div class="mt-2 border-t pt-2">
-          <Button variant="ghost" icon-left="plus" label="Add filter" @click="add" />
+          <Button variant="ghost" icon-left="plus" :label="__('Add filter')" @click="add" />
         </div>
       </div>
     </template>
@@ -66,6 +66,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Button, Popover, Autocomplete, FormControl } from 'frappe-ui'
+import { __ } from '../translation.js'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -76,10 +77,27 @@ const emit = defineEmits(['update:modelValue', 'apply'])
 const fieldOptions = computed(() =>
   props.fields.map(f => ({ label: f.label, value: f.fieldname })))
 
-const TEXT_OPS   = ['like', 'not like', 'equals', 'not equals', 'is set', 'is not set']
-const NUM_OPS    = ['=', '!=', '>', '<', '>=', '<=']
-const SELECT_OPS = ['equals', 'not equals']
-const DATE_OPS   = ['=', '>', '<', '>=', '<=']
+const TEXT_OPS = [
+  { label: __('like'), value: 'like' },
+  { label: __('not like'), value: 'not like' },
+  { label: __('equals'), value: 'equals' },
+  { label: __('not equals'), value: 'not equals' },
+  { label: __('is set'), value: 'is set' },
+  { label: __('is not set'), value: 'is not set' },
+]
+const NUM_OPS = [
+  { label: '=', value: '=' },
+  { label: '!=', value: '!=' },
+  { label: '>', value: '>' },
+  { label: '<', value: '<' },
+  { label: '>=', value: '>=' },
+  { label: '<=', value: '<=' },
+]
+const SELECT_OPS = [
+  { label: __('equals'), value: 'equals' },
+  { label: __('not equals'), value: 'not equals' },
+]
+const DATE_OPS = NUM_OPS
 
 function fieldDef(fieldname) { return props.fields.find(f => f.fieldname === fieldname) }
 function operatorsFor(fieldname) {
@@ -89,6 +107,7 @@ function operatorsFor(fieldname) {
   if (t === 'Date') return DATE_OPS
   return TEXT_OPS
 }
+function firstOpValue(fieldname) { return operatorsFor(fieldname)[0].value }
 function isUnary(op) { return op === 'is set' || op === 'is not set' }
 function valueIsSelect(f) { return fieldDef(f.field)?.fieldtype === 'Select' }
 function valueOptions(fieldname) { return fieldDef(fieldname)?.options || [] }
@@ -99,7 +118,7 @@ function commit(next) {
 }
 function add() {
   const first = props.fields[0]
-  commit([...props.modelValue, { field: first.fieldname, operator: operatorsFor(first.fieldname)[0], value: '' }])
+  commit([...props.modelValue, { field: first.fieldname, operator: firstOpValue(first.fieldname), value: '' }])
 }
 function remove(i) { commit(props.modelValue.filter((_, idx) => idx !== i)) }
 function clearAll() { commit([]) }
@@ -109,8 +128,7 @@ function update(i, key, val) {
 }
 function setField(i, val) {
   const fieldname = val?.value ?? val
-  const ops = operatorsFor(fieldname)
-  const next = props.modelValue.map((f, idx) => idx === i ? { field: fieldname, operator: ops[0], value: '' } : f)
+  const next = props.modelValue.map((f, idx) => idx === i ? { field: fieldname, operator: firstOpValue(fieldname), value: '' } : f)
   commit(next)
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
   <Popover placement="bottom-end">
     <template #target="{ togglePopover }">
-      <Button label="Sort" icon-left="arrow-up-down" @click="togglePopover">
+      <Button :label="__('Sort')" icon-left="arrow-up-down" @click="togglePopover">
         <template v-if="modelValue.length" #suffix>
           <span class="flex size-5 items-center justify-center rounded bg-surface-white text-xs font-medium text-ink-gray-8 shadow-sm">
             {{ modelValue.length }}
@@ -17,20 +17,20 @@
               class="w-40"
               :options="fieldOptions"
               :model-value="s.field"
-              placeholder="Field"
+              :placeholder="__('Field')"
               @update:model-value="v => update(i, 'field', v?.value ?? v)" />
             <FormControl
               class="w-28"
               type="select"
-              :options="[{label:'Asc', value:'asc'}, {label:'Desc', value:'desc'}]"
+              :options="[{label: __('Asc'), value:'asc'}, {label: __('Desc'), value:'desc'}]"
               :model-value="s.dir"
               @update:model-value="v => update(i, 'dir', v)" />
             <Button variant="ghost" icon="x" @click="remove(i)" />
           </div>
         </div>
-        <div v-else class="px-1 py-2 text-sm text-ink-gray-5">No sorting applied</div>
+        <div v-else class="px-1 py-2 text-sm text-ink-gray-5">{{ __('No sorting applied') }}</div>
         <div class="mt-2 border-t pt-2">
-          <Button variant="ghost" icon-left="plus" label="Add sort" @click="add" />
+          <Button variant="ghost" icon-left="plus" :label="__('Add sort')" @click="add" />
         </div>
       </div>
     </template>
@@ -40,6 +40,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Button, Popover, Autocomplete, FormControl } from 'frappe-ui'
+import { __ } from '../translation.js'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },  // [{field, dir}]

@@ -6,14 +6,14 @@
           <Button
             :variant="mode === 'existing' ? 'solid' : 'subtle'"
             size="sm"
-            label="Existing list"
+            :label="__('Existing list')"
             :disabled="!listOptions.length"
             @click="mode = 'existing'"
           />
           <Button
             :variant="mode === 'new' ? 'solid' : 'subtle'"
             size="sm"
-            label="New list"
+            :label="__('New list')"
             @click="mode = 'new'"
           />
         </div>
@@ -36,24 +36,24 @@
               @click="targetList = o.value"
             >
               <span>{{ o.label }}</span>
-              <span v-if="targetList === o.value" class="text-xs text-ink-gray-5">Selected</span>
+              <span v-if="targetList === o.value" class="text-xs text-ink-gray-5">{{ __('Selected') }}</span>
             </button>
           </div>
-          <p v-else class="text-xs text-ink-gray-5">No other lists — use “New list”.</p>
+          <p v-else class="text-xs text-ink-gray-5">{{ __('No other lists — use "New list".') }}</p>
         </div>
 
         <TextInput
           v-else
           v-model="newListName"
-          placeholder="New list name"
+          :placeholder="__('New list name')"
           @keydown.enter="confirm"
         />
       </div>
     </template>
     <template #actions="{ close }">
       <div class="flex justify-end gap-2">
-        <Button label="Cancel" @click="close" />
-        <Button variant="solid" label="Move" :loading="loading" @click="confirm" />
+        <Button :label="__('Cancel')" @click="close" />
+        <Button variant="solid" :label="__('Move')" :loading="loading" @click="confirm" />
       </div>
     </template>
   </Dialog>
@@ -63,6 +63,7 @@
 import { ref, computed, watch } from 'vue'
 import { Dialog, Button, TextInput, toast } from 'frappe-ui'
 import { call } from '../composables/api.js'
+import { __ } from '../translation.js'
 
 const props = defineProps({
   modelValue:  { type: Boolean, default: false },
@@ -82,7 +83,7 @@ const targetList  = ref('')
 const newListName = ref('')
 const loading     = ref(false)
 
-const title = computed(() => `Move ${props.names.length} prospect(s) to…`)
+const title = computed(() => __('Move {0} prospect(s) to…', [props.names.length]))
 
 const listOptions = computed(() =>
   props.lists
@@ -99,8 +100,8 @@ watch(show, (open) => {
 })
 
 async function confirm() {
-  if (mode.value === 'existing' && !targetList.value) { toast.warning('Pick a list.'); return }
-  if (mode.value === 'new' && !newListName.value.trim()) { toast.warning('Enter a list name.'); return }
+  if (mode.value === 'existing' && !targetList.value) { toast.warning(__('Pick a list.')); return }
+  if (mode.value === 'new' && !newListName.value.trim()) { toast.warning(__('Enter a list name.')); return }
   loading.value = true
   try {
     const r = await call('prospecting.api.move_to_list', {
@@ -108,7 +109,7 @@ async function confirm() {
       target_list:    mode.value === 'existing' ? targetList.value : '',
       new_list_name:  mode.value === 'new' ? newListName.value.trim() : '',
     })
-    toast.success(`Moved ${r.moved} prospect(s)`)
+    toast.success(__('Moved {0} prospect(s)', [r.moved]))
     show.value = false
     emit('moved', r)
   } catch (e) {
